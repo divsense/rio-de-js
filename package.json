@@ -1,0 +1,33 @@
+{
+  "name": "rio-de-js",
+  "version": "0.0.1",
+  "description": "Divsense Rio to Javascript Compiler",
+  "main": "index.js",
+  "scripts": {
+    "gen": "pegjs -o index.js grammar.pegjs",
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/divsense/rio-de-js.git"
+  },
+  "keywords": [
+    "rio",
+    "divsense",
+    "compiler",
+    "javascript"
+  ],
+  "author": "Oleg Kirichenko",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/divsense/rio-de-js/issues"
+  },
+  "homepage": "https://github.com/divsense/rio-de-js#readme",
+  "devDependencies": {
+    "astring": "^1.2.0",
+    "pegjs": "^0.10.0"
+  },
+  "dependencies": {
+    "npm": "^5.7.1"
+  }
+}
