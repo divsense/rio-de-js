@@ -2,6 +2,7 @@
 // ==================
 //
 // To Do:
+//  curry all functions when arguments > 1
 // 
 
 {
@@ -51,6 +52,21 @@
 
   function optionalList(value) {
     return value !== null ? value : [];
+  }
+
+  function flattenList(list, index) {
+    return list.map(function(x) { return x[index] })
+  }
+
+  function buildComposition(head, tail, index) {
+    if(tail.length) {
+      return {
+        type: "CallExpression",
+        callee: head, arguments: [buildComposition(tail[0], tail.slice(1))]
+      };
+    } else {
+      return head
+    }
   }
 }
 
@@ -483,6 +499,14 @@ CallExpression
         return { type: "CallExpression", callee: callee, arguments: args };
       }
 
+MemberInCompositionExpression
+  = e:( Identifier / FunctionExpression){ return e }
+
+CallInCompositionExpression
+  = callee:MemberInCompositionExpression __ args:Arguments {
+        return { type: "CallExpression", callee: callee, arguments: args };
+      }
+
 Arguments
   = "(" __ args:(ArgumentList __)? ")" {
       return optionalList(extractOptional(args, 0));
@@ -609,9 +633,31 @@ LogicalOROperator
   = "||"
 
 Expression
-  = ConditionalExpression
+  = BareExpression / BracketExpression
 
-ConditionalExpression
+BareExpression
+  = SpecialFunctionExpression
+  / IoExpression
+  / CompositionExpression
+  / ConditionalExpression
+
+BracketExpression
+  = "(" __ e:Expression __ ")" { return e }
+
+SpecialFunctionExpression
+  = SingleArgumentFunctionExpression / EmptyArgumentFunctionExpression
+
+EmptyArgumentFunctionExpression
+  = "(" _ ")" __ body:FunctionBody {
+      return {
+        type: "FunctionExpression",
+        id: null,
+        params: [],
+        body: optionalList(body)
+      };
+    }
+
+SingleArgumentFunctionExpression
   = param:Identifier __ body:FunctionBody {
       return {
         type: "FunctionExpression",
@@ -620,7 +666,34 @@ ConditionalExpression
         body: optionalList(body)
       };
     }
-  / test:LogicalORExpression __
+
+IoExpression
+  = __ "io" __ "{{" __ "}}" {
+    return {
+        type: "Literal",
+        value: null
+    }
+  }
+
+CompositionExpression
+  = callee:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
+    return {
+        type: "CallExpression",
+        callee: callee, arguments: [buildComposition(snd, flattenList(tail,3))]
+    };
+  }
+
+CompositionMember
+  = BracketCompositionMember / BareCompositionMember
+
+BareCompositionMember
+  = CallInCompositionExpression / Identifier
+
+BracketCompositionMember
+  = "(" __ m:(SpecialFunctionExpression / ConditionalExpression) __ ")" { return m }
+
+ConditionalExpression
+  = test:LogicalORExpression __
     "?" __ consequent:Expression __
     ":" __ alternate:Expression
     {
@@ -803,7 +876,7 @@ FunctionBlockBody
     }
 
 FunctionOneLiner
-  = !"{" body:Expression EOS {
+  = !"{" body:Expression {
       return {
         type: "BlockStatement",
         body: [{type: "ReturnStatement", argument: body}]
