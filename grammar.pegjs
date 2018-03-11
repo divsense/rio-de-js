@@ -55,49 +55,6 @@
     return list.map(function(x) { return x[index] })
   }
 
-  function buildComposition(head, tail, index) {
-    if(tail.length) {
-      return {
-        type: "CallExpression",
-        callee: head, arguments: [buildComposition(tail[0], tail.slice(1))]
-      };
-    } else {
-      return head
-    }
-  }
-
-  function buildCurriedFunctionExpression(params, body) {
-    var p = params.shift();
-
-    var _body = params.length === 0 ? body.body : [{
-                        type: "ReturnStatement",
-                        argument: buildCurriedFunctionExpression(params, body) 
-                }];
-
-    return {
-      type: "FunctionExpression",
-      id: null,
-      params: [p],
-      body: {
-        type: "BlockStatement",
-        body: _body
-        }
-    };
-  }
-
-    function buildCurriedFunctionCall(callee, args) {
-        if(args.length > 1) {
-            var a = args.shift();
-            return {
-                type: "CallExpression",
-                callee: buildCurriedFunctionCall(callee, args),
-                arguments: [a]
-            };
-        } else {
-            return { type: "CallExpression", callee: callee, arguments: args };
-        }
-    }
-
     function buildExportList(head, tail, index) {
         return buildList(head, tail, index)
                 .map(function(x){
@@ -109,9 +66,6 @@
                     }
                 });
     }
-
-	function objId(x) {
-	}
 
     function buildMonadicExpression(id, items) {
         return items.reduce(function(m,a) {
@@ -767,10 +721,14 @@ SingleArgumentFunctionExpression
     }
 
 CompositionExpression
-  = callee:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
+  = head:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
     return {
         type: "CallExpression",
-        callee: callee, arguments: [buildComposition(snd, flattenList(tail,3))]
+        callee: {
+          type: "Identifier",
+          name: "compose"
+        },
+        arguments: [head].concat(buildList(snd, tail, 3))
     };
   }
 
@@ -1003,16 +961,12 @@ ImportSpec
 
 FunctionExpression
   = "(" __ params:(FormalParameterList __)? ")" __ body:FunctionBody {
-        if(params[0].length) {
-            return buildCurriedFunctionExpression(params[0], body);
-        } else {
-            return {
-              type: "FunctionExpression",
-              id: null,
-              params: optionalList(extractOptional(params, 0)),
-              body: optionalList(body)
-            };
-        }
+      return {
+          type: "FunctionExpression",
+          id: null,
+          params: optionalList(extractOptional(params, 0)),
+          body: optionalList(body)
+      };
     }
 
 FormalParameterList
