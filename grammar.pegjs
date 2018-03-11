@@ -1,9 +1,6 @@
 // Rio Grammar
 // ==================
 //
-// To Do:
-//  curry all functions when arguments > 1
-// 
 
 {
   var TYPES_TO_PROPERTY_NAMES = {
@@ -68,6 +65,70 @@
       return head
     }
   }
+
+  function buildCurriedFunctionExpression(params, body) {
+    var p = params.shift();
+
+    var _body = params.length === 0 ? body.body : [{
+                        type: "ReturnStatement",
+                        argument: buildCurriedFunctionExpression(params, body) 
+                }];
+
+    return {
+      type: "FunctionExpression",
+      id: null,
+      params: [p],
+      body: {
+        type: "BlockStatement",
+        body: _body
+        }
+    };
+  }
+
+    function buildCurriedFunctionCall(callee, args) {
+        if(args.length > 1) {
+            var a = args.shift();
+            return {
+                type: "CallExpression",
+                callee: buildCurriedFunctionCall(callee, args),
+                arguments: [a]
+            };
+        } else {
+            return { type: "CallExpression", callee: callee, arguments: args };
+        }
+    }
+
+    function buildExportList(head, tail, index) {
+        return buildList(head, tail, index)
+                .map(function(x){
+                    return {
+                      type: "Property",
+                      key: x,
+                      value: x,
+                      kind: "init"
+                    }
+                });
+    }
+
+	function objId(x) {
+	}
+
+    function buildMonadicExpression(id, items) {
+        return items.reduce(function(m,a) {
+
+			return {
+				type: "CallExpression",
+				callee: {
+				  type: "MemberExpression",
+				  property: a.callee,
+				  computed: false,
+				  object: m.type ? m : id
+				},
+				arguments: a.arguments
+			}
+
+        }, {})
+    }
 }
 
 Start
@@ -428,6 +489,7 @@ PrimaryExpression
   / Literal
   / ArrayLiteral
   / ObjectLiteral
+  / "(" __ expression:Expression __ ")" { return expression; }
 
 ArrayLiteral
   = "[" __ elision:(Elision __)? "]" {
@@ -491,11 +553,54 @@ PropertyName
 PropertySetParameterList
   = id:Identifier { return [id]; }
 
+// Enable for Divsense
+//  |
+//  V
 MemberExpression
   = e:( PrimaryExpression / FunctionExpression){ return e }
 
+//  ^
+//  |
+// Enable for Divsense
+
+
+// Disable for Divsense
+//  |
+//  V
+/*MemberExpression
+  = head:( PrimaryExpression / FunctionExpression) 
+    tail:(
+        __ "[" __ property:NumericLiteral __ "]" {
+          return { property: property, computed: true };
+        }
+      / __ "!" property:StringLiteral {
+          return { property: property, computed: true };
+        }
+      / __ "!" property:IdentifierName {
+          return { property: property, computed: false };
+        }
+    )*
+  { 
+      return tail.reduce(function(result, element) {
+        return {
+          type: "MemberExpression",
+          object: result,
+          property: element.property,
+          computed: element.computed
+        };
+      }, head);
+  }*/
+//  ^
+//  |
+// Disable for Divsense
+
 CallExpression
   = callee:MemberExpression __ args:Arguments {
+        return { type: "CallExpression", callee: callee, arguments: args };
+      }
+
+StrictCallExpression
+  = callee:Identifier __ args:Arguments {
         return { type: "CallExpression", callee: callee, arguments: args };
       }
 
@@ -633,16 +738,10 @@ LogicalOROperator
   = "||"
 
 Expression
-  = BareExpression / BracketExpression
-
-BareExpression
   = SpecialFunctionExpression
-  / IoExpression
+  / MonadicExpression
   / CompositionExpression
   / ConditionalExpression
-
-BracketExpression
-  = "(" __ e:Expression __ ")" { return e }
 
 SpecialFunctionExpression
   = SingleArgumentFunctionExpression / EmptyArgumentFunctionExpression
@@ -666,14 +765,6 @@ SingleArgumentFunctionExpression
         body: optionalList(body)
       };
     }
-
-IoExpression
-  = __ "io" __ "{{" __ "}}" {
-    return {
-        type: "Literal",
-        value: null
-    }
-  }
 
 CompositionExpression
   = callee:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
@@ -718,6 +809,16 @@ Declaration
 Initialiser
   = "=" !"=" __ expression:Expression { return expression; }
 
+MonadicExpression
+  = id:Identifier _ "{{" __ head:StrictCallExpression tail:( __ ">>>" __ StrictCallExpression)* __ "}}" {
+
+	return {
+      type: "ExpressionStatement",
+      expression: buildMonadicExpression(id, buildList(head, tail, 3))
+    }
+
+  }
+
 // ----- A.4 Statements -----
 
 Statement
@@ -729,6 +830,8 @@ Statement
   / BreakStatement
   / ReturnStatement
   / SwitchStatement
+  / ExportStatement
+  / ImportStatement
 
 Block
   = "{" __ body:(StatementList __)? "}" {
@@ -846,16 +949,70 @@ DefaultClause
       };
     }
 
+ExportStatement
+  = ExportToken _ head:Identifier tail:(__ "," __ Identifier)* {
+      return {
+        type: "ReturnStatement",
+        argument: {
+            type: "ObjectExpression",
+            properties: buildExportList(head, tail, 3)
+        }
+      };
+  }
+
+ImportStatement
+  = "import" _ url:StringLiteral __ "!{" __ head:ImportSpec tail:(__ "," __ ImportSpec)* __ "}" EOS {
+	return {
+		type: "ImportDeclaration",
+		source: url,
+		specifiers: buildList(head, tail, 3),
+        exclusive: true
+    }
+  }
+  / "import" _ url:StringLiteral __ "{" __ head:ImportSpec tail:(__ "," __ ImportSpec)* __ "}" EOS {
+	return {
+		type: "ImportDeclaration",
+		source: url,
+		specifiers: buildList(head, tail, 3)
+    }
+  }
+  / "import" _ url:StringLiteral EOS {
+	return {
+		type: "ImportDeclaration",
+		source: url,
+    }
+  }
+
+ImportSpec
+  = id:Identifier _ "as" _ name:Identifier {
+	return {
+		type: "ImportSpecifier",
+        imported: id,
+		local: name
+    }
+  }
+  / id:Identifier {
+	return {
+		type: "ImportSpecifier",
+        imported: id
+    }
+  }
+
+
 // ----- A.5 Functions and Programs -----
 
 FunctionExpression
   = "(" __ params:(FormalParameterList __)? ")" __ body:FunctionBody {
-      return {
-        type: "FunctionExpression",
-        id: null,
-        params: optionalList(extractOptional(params, 0)),
-        body: optionalList(body)
-      };
+        if(params[0].length) {
+            return buildCurriedFunctionExpression(params[0], body);
+        } else {
+            return {
+              type: "FunctionExpression",
+              id: null,
+              params: optionalList(extractOptional(params, 0)),
+              body: optionalList(body)
+            };
+        }
     }
 
 FormalParameterList
