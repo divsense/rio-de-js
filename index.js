@@ -3,8 +3,6 @@ const { lensPath, find, flatten ,update, view, has, propEq, length, filter, nth,
 const { generate } = require('astring')
 const rio = require('./rio.js')
 
-const ioNames = ['of', 'from', 'map', 'chain']
-
 const setScope = set(lensProp('scope'))
 const setResult = set(lensProp('result'))
 const mapInit = map(prop('init'))
@@ -146,10 +144,10 @@ const buildLibScope = (xs, libs) => reduce((m,a) => {
 // removeImportDeclarations :: AST -> AST
 const removeImportDeclarations = over(lensProp('body'), filter(x => x.type !== 'ImportDeclaration'))
 
-// resolveIdentifiers :: [String] -> AST -> AST
-const resolveIdentifiers = scopeNames => ast => {
+// resolveIdentifiers :: ([String], [String]) -> AST -> AST
+const resolveIdentifiers = (coreProps, scopeNames) => ast => {
 
-    const state = { scope: [ioNames, scopeNames], result: null }
+    const state = { scope: [coreProps, scopeNames], result: null }
 
     const unresolved = reduce(findUnresolvedDeclaration, state, ast.body)
 
@@ -192,20 +190,21 @@ exports.resolveLibs = (ast, riolibs) => compose(
             map(path(['source','value'])),
             filter(propEq('type', 'ImportDeclaration')))( ast.body )
 
-// compile :: (Ast, CoreLibs, RioLibs) -> [String, Error?]
-exports.compile = function(ast, corelibs, riolibs) {
+// compile :: (Ast, [String], CoreLibs, RioLibs) -> [String, Error?]
+exports.compile = function(ast, coreProps, corelibs, riolibs) {
 
     try {
         const impdecs = filter(propEq('type', 'ImportDeclaration'), ast.body)
         const libScope = buildLibScope(impdecs, riolibs)
     
         const scopeNames = flatten(map(prop('names'), libScope))
+
         const coreNames = flatten(map(prop('names'), values(corelibs)))
         const names = concat(coreNames, scopeNames)
 
         const res = compose(
           generate,
-          resolveIdentifiers(names),
+          resolveIdentifiers(coreProps, names),
           removeImportDeclarations,
           relocateExports)( ast )
 
@@ -224,7 +223,7 @@ exports.compile = function(ast, corelibs, riolibs) {
             functions: map(x => funcs[x], exports)
         }
 
-        return [lib]
+        return [lib, null, res]
 
     } catch(e) {
 
@@ -236,11 +235,4 @@ exports.compile = function(ast, corelibs, riolibs) {
 
 
 }
-
-exports.compute = function(name, input) {
-
-}
-
-
-
 
