@@ -67,7 +67,7 @@
                 });
     }
 
-    function buildMonadicExpression(id, items) {
+    function buildMonadComposition(id, items) {
         return items.reduce(function(m,a) {
 
 			return {
@@ -184,6 +184,8 @@ Keyword
   / ReturnToken
   / SwitchToken
   / ArrowToken
+  / BindToken
+  / ThenToken
 
 Literal
   = NullLiteral
@@ -406,6 +408,8 @@ EnumToken       = "enum"       !IdentifierPart
 ExportToken     = "export"     !IdentifierPart
 FalseToken      = "false"      !IdentifierPart
 ArrowToken      = "->"         !IdentifierPart
+BindToken       = ">>="         !IdentifierPart
+ThenToken       = ">>>"         !IdentifierPart
 IfToken         = "if"         !IdentifierPart
 ImportToken     = "import"     !IdentifierPart
 NullToken       = "null"       !IdentifierPart
@@ -507,51 +511,27 @@ PropertyName
 PropertySetParameterList
   = id:Identifier { return [id]; }
 
-// Enable for Divsense
-//  |
-//  V
 MemberExpression
-  = e:( PrimaryExpression / FunctionExpression){ return e }
-
-//  ^
-//  |
-// Enable for Divsense
-
-
-// Disable for Divsense
-//  |
-//  V
-/*MemberExpression
-  = head:( PrimaryExpression / FunctionExpression) 
-    tail:(
-        __ "[" __ property:NumericLiteral __ "]" {
-          return { property: property, computed: true };
-        }
-      / __ "!" property:StringLiteral {
-          return { property: property, computed: true };
-        }
-      / __ "!" property:IdentifierName {
-          return { property: property, computed: false };
-        }
-    )*
-  { 
-      return tail.reduce(function(result, element) {
-        return {
-          type: "MemberExpression",
-          object: result,
-          property: element.property,
-          computed: element.computed
-        };
-      }, head);
-  }*/
-//  ^
-//  |
-// Disable for Divsense
+  = PrimaryExpression / FunctionExpression
 
 CallExpression
-  = callee:MemberExpression __ args:Arguments {
+  = head:(
+      callee:MemberExpression __ args:Arguments {
         return { type: "CallExpression", callee: callee, arguments: args };
       }
+    )
+    tail:(
+        __ args:Arguments {
+          return { type: "CallExpression", arguments: args };
+        }
+    )*
+    {
+      return tail.reduce(function(result, element) {
+        element.callee = result;
+
+        return element;
+      }, head);
+    }
 
 StrictCallExpression
   = callee:Identifier __ args:Arguments {
@@ -596,7 +576,7 @@ UnaryExpression
 
 UnaryOperator
   = $("+" ![+=])
-  / $("-" ![-=])
+  / $("-" ![-=>])
   / "~"
   / "!"
 
@@ -617,7 +597,7 @@ AdditiveExpression
 
 AdditiveOperator
   = $("+" ![+=])
-  / $("-" ![-=])
+  / $("-" ![-=>])
 
 ShiftExpression
   = head:AdditiveExpression
@@ -636,7 +616,7 @@ RelationalExpression
 
 RelationalOperator
   = "<="
-  / ">="
+  / $(!">" ">=")
   / $("<" !"<")
   / $(">" !">")
 
@@ -693,8 +673,16 @@ LogicalOROperator
 
 Expression
   = SpecialFunctionExpression
-  / MonadicExpression
   / CompositionExpression
+  / PromiseComposition
+  / CallExpression
+  / ConditionalExpression
+
+AssignmentExpression
+  = SpecialFunctionExpression
+  / CompositionExpression
+  / PromiseComposition
+  / CallExpression
   / ConditionalExpression
 
 SpecialFunctionExpression
@@ -719,6 +707,18 @@ SingleArgumentFunctionExpression
         body: optionalList(body)
       };
     }
+
+PromiseComposition
+  = head:CompositionMember __ ThenToken __ snd:CompositionMember tail:(__ ThenToken __ CompositionMember)* {
+    return {
+        type: "CallExpression",
+        callee: {
+          type: "Identifier",
+          name: "pipe"
+        },
+        arguments: [head].concat(buildList(snd, tail, 3))
+    };
+  }
 
 CompositionExpression
   = head:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
@@ -755,6 +755,19 @@ ConditionalExpression
     }
   / LogicalORExpression
 
+ConditionalExpressionOnly
+  = test:LogicalORExpression __
+    "?" __ consequent:Expression __
+    ":" __ alternate:Expression
+    {
+      return {
+        type: "ConditionalExpression",
+        test: test,
+        consequent: consequent,
+        alternate: alternate
+      };
+    }
+
 Declaration
   = id:Identifier init:(__ Initialiser)? {
       return {
@@ -765,17 +778,8 @@ Declaration
     }
 
 Initialiser
-  = "=" !"=" __ expression:Expression { return expression; }
+  = !">>" "=" !"=" __ expression:AssignmentExpression { return expression; }
 
-MonadicExpression
-  = id:Identifier _ "{{" __ head:StrictCallExpression tail:( __ ">>>" __ StrictCallExpression)* __ "}}" {
-
-	return {
-      type: "ExpressionStatement",
-      expression: buildMonadicExpression(id, buildList(head, tail, 3))
-    }
-
-  }
 
 // ----- A.4 Statements -----
 
@@ -857,7 +861,7 @@ ReturnStatement
   = ReturnToken EOS {
       return { type: "ReturnStatement", argument: null };
     }
-  / ReturnToken _ argument:Expression EOS {
+  / ReturnToken _ argument:(ConditionalExpressionOnly / Expression) EOS {
       return { type: "ReturnStatement", argument: argument };
     }
 
@@ -987,7 +991,7 @@ FunctionBlockBody
     }
 
 FunctionOneLiner
-  = !"{" body:Expression {
+  = !"{" body:(ConditionalExpressionOnly / Expression) {
       return {
         type: "BlockStatement",
         body: [{type: "ReturnStatement", argument: body}]

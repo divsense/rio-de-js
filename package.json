@@ -7,7 +7,7 @@
     "gen": "pegjs -o rio.js grammar.pegjs",
     "js": "pegjs -o temp/js/parser.js temp/js/grammar.pegjs",
     "index": "node index.js",
-    "test": "node test/driver.js",
+    "play": "node play/driver.js",
     "jtest": "node temp/js/test.js"
   },
   "repository": {

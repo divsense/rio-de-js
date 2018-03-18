@@ -1,5 +1,5 @@
 const fs = require('fs') //!!
-const { lensPath, find, flatten ,update, view, has, propEq, length, filter, nth, remove, findIndex, equals, is, prop, values, indexOf, path, concat, reduce, map, compose, set, lensProp, over, append, last, dropLast  } = require('ramda')
+const { assoc, lensPath, find, flatten ,update, view, has, propEq, length, filter, nth, remove, findIndex, equals, is, prop, values, indexOf, path, concat, reduce, map, compose, set, lensProp, over, append, last, dropLast  } = require('ramda')
 const { generate } = require('astring')
 const rio = require('./rio.js')
 
@@ -144,10 +144,10 @@ const buildLibScope = (xs, libs) => reduce((m,a) => {
 // removeImportDeclarations :: AST -> AST
 const removeImportDeclarations = over(lensProp('body'), filter(x => x.type !== 'ImportDeclaration'))
 
-// resolveIdentifiers :: ([String], [String]) -> AST -> AST
-const resolveIdentifiers = (coreProps, scopeNames) => ast => {
+// resolveIdentifiers :: [String] -> AST -> AST
+const resolveIdentifiers = scopeNames => ast => {
 
-    const state = { scope: [coreProps, scopeNames], result: null }
+    const state = { scope: [scopeNames], result: null }
 
     const unresolved = reduce(findUnresolvedDeclaration, state, ast.body)
 
@@ -156,7 +156,6 @@ const resolveIdentifiers = (coreProps, scopeNames) => ast => {
     }
 
     return ast
-
 }
 
 const getExportedIdentifiers = ast => {
@@ -172,7 +171,6 @@ const getExportedIdentifiers = ast => {
 
 // parse :: String -> [AST, Error?]
 exports.parse = function(code) {
-
     try {
         return [ rio.parse(code) ]
     } catch(e) {
@@ -181,7 +179,6 @@ exports.parse = function(code) {
             details: !e.location ? '' : 'At line: ' + e.location.start.line + ' column: ' + e.location.start.column
         }]
     }
-
 }
 
 // resolveLibs :: (AST, RioLibs) -> [URL]
@@ -190,49 +187,85 @@ exports.resolveLibs = (ast, riolibs) => compose(
             map(path(['source','value'])),
             filter(propEq('type', 'ImportDeclaration')))( ast.body )
 
+// compile :: (Ast, [String], CoreLibs, RioLibs) -> {libScope, imports}
+exports.buildLibScope = function(ast, riolibs, default_lib_urls) {
+
+    const impdecs = filter(propEq('type', 'ImportDeclaration'), ast.body)
+
+    const defs = reduce( (m,a) => {
+        const url = path(['source', 'value'], a)
+        const index = indexOf(url, default_lib_urls)
+        if( index > -1 ) {
+            return remove(index, 1, m)
+        }
+        return m
+    }, default_lib_urls, impdecs)
+
+    const impdecs_ = !defs.length ? impdecs : reduce((m,a) => {
+		const dec = {
+			type: "ImportDeclaration",
+			source: {
+				type: "Literal",
+				value: a
+			}
+		}
+        return append(dec, m)
+    }, impdecs, defs)
+
+    const libScope = buildLibScope(impdecs_, riolibs)
+
+    const scopeNames = flatten(map(prop('names'), libScope))
+
+    return {libScope, imports:scopeNames}
+}
+
 // compile :: (Ast, [String], CoreLibs, RioLibs) -> [String, Error?]
-exports.compile = function(ast, coreProps, corelibs, riolibs) {
-
+exports.compile = function(ast, imports) {
     try {
-        const impdecs = filter(propEq('type', 'ImportDeclaration'), ast.body)
-        const libScope = buildLibScope(impdecs, riolibs)
-    
-        const scopeNames = flatten(map(prop('names'), libScope))
-
-        const coreNames = flatten(map(prop('names'), values(corelibs)))
-        const names = concat(coreNames, scopeNames)
-
-        const res = compose(
+        const code = compose(
           generate,
-          resolveIdentifiers(coreProps, names),
+          resolveIdentifiers(imports),
           removeImportDeclarations,
           relocateExports)( ast )
 
-        const flib = new Function(names.join(','), res)
+        const exports = getExportedIdentifiers(ast)
+
+        return {code, exports}
+
+    } catch(e) {
+
+        return {
+            error: 'Compile error:' + e.message,
+            details: !e.location ? '' : 'At line: ' + e.location.start.line + ' column: ' + e.location.start.column
+        }
+    }
+}
+
+// makeLib :: (String, LibScope, [String], [String]) -> {lib/error}
+exports.makeLib = function(code, libScope, imports, exports) {
+
+    try {
+
+        const flib = new Function(imports.join(','), code)
 
         const scopeArgs = flatten(map(prop('functions'), libScope))
-        const coreArgs = flatten(map(prop('functions'), values(corelibs)))
-        const args = concat(coreArgs, scopeArgs)
 
-        const funcs = flib.apply(null, args)
-
-        const exports = getExportedIdentifiers(ast)
+        const funcs = flib.apply(null, scopeArgs)
 
         const lib = {
             names: exports,
             functions: map(x => funcs[x], exports)
         }
 
-        return [lib, null, res]
+        return {lib}
 
     } catch(e) {
 
-        return [null, {
-            message: 'Compile error:' + e.message,
+        return {
+            error: 'Making lib error:' + e.message,
             details: !e.location ? '' : 'At line: ' + e.location.start.line + ' column: ' + e.location.start.column
-        }]
+        }
     }
-
 
 }
 
