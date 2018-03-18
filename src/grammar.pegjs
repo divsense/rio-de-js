@@ -3,11 +3,6 @@
 //
 
 {
-  var TYPES_TO_PROPERTY_NAMES = {
-    CallExpression:   "callee",
-    MemberExpression: "object",
-  };
-
   function filledArray(count, value) {
     return Array.apply(null, new Array(count))
       .map(function() { return value; });
@@ -67,6 +62,31 @@
                 });
     }
 
+  function fetchThen(list, a, b) {
+    return list.reduce(function(m, e){ 
+        m.push({
+            type: "CallExpression",
+            arguments: [ e[b] ],
+            callee: {
+                type: "MemberExpression",
+                computed: false,
+                property: {
+                    type: "Identifier",
+                    name: e[a][0] === ">>>" ? "then" : "catch"
+                },
+                object: { }
+            }
+        });
+        return m; 
+    }, []);
+  }
+
+    function buildPromiseComposition(id, items) {
+        return items.reduce(function(m,a) {
+            a.callee.object = m.type ? m : id
+            return a
+        }, {})
+    }
     function buildMonadComposition(id, items) {
         return items.reduce(function(m,a) {
 
@@ -186,6 +206,10 @@ Keyword
   / ArrowToken
   / BindToken
   / ThenToken
+  / CatchToken
+  / MapToken
+  / ApplyToken
+  / FishToken
 
 Literal
   = NullLiteral
@@ -409,7 +433,11 @@ ExportToken     = "export"     !IdentifierPart
 FalseToken      = "false"      !IdentifierPart
 ArrowToken      = "->"         !IdentifierPart
 BindToken       = ">>="         !IdentifierPart
+FishToken       = ">=>"         !IdentifierPart
+MapToken        = "<$>"         !IdentifierPart
+ApplyToken      = "<*>"         !IdentifierPart
 ThenToken       = ">>>"         !IdentifierPart
+CatchToken      = "!>>"         !IdentifierPart
 IfToken         = "if"         !IdentifierPart
 ImportToken     = "import"     !IdentifierPart
 NullToken       = "null"       !IdentifierPart
@@ -546,6 +574,21 @@ CallInCompositionExpression
         return { type: "CallExpression", callee: callee, arguments: args };
       }
 
+CallInPromiseCompositionExpression
+  = callee:MemberInCompositionExpression __ args:PromiseArguments {
+        return { type: "CallExpression", callee: callee, arguments: args };
+      }
+
+PromiseArguments
+  = "(" __ args:(PromiseArgumentList __)? ")" {
+      return optionalList(extractOptional(args, 0));
+    }
+
+PromiseArgumentList
+  = head:InPromiseExpression tail:(__ "," __ InPromiseExpression)* {
+      return buildList(head, tail, 3);
+    }
+
 Arguments
   = "(" __ args:(ArgumentList __)? ")" {
       return optionalList(extractOptional(args, 0));
@@ -678,6 +721,12 @@ Expression
   / CallExpression
   / ConditionalExpression
 
+InPromiseExpression
+  = SpecialFunctionExpression
+  / CompositionExpression
+  / CallExpression
+  / ConditionalExpression
+
 AssignmentExpression
   = SpecialFunctionExpression
   / CompositionExpression
@@ -709,16 +758,14 @@ SingleArgumentFunctionExpression
     }
 
 PromiseComposition
-  = head:CompositionMember __ ThenToken __ snd:CompositionMember tail:(__ ThenToken __ CompositionMember)* {
-    return {
-        type: "CallExpression",
-        callee: {
-          type: "Identifier",
-          name: "pipe"
-        },
-        arguments: [head].concat(buildList(snd, tail, 3))
-    };
+  = head:PromiseCompositionMember tail:(__ ThenCall __ PromiseCompositionMember)* {
+    return buildPromiseComposition(head, fetchThen(tail, 1, 3))
   }
+
+ThenCall = ThenToken / CatchToken
+
+PromiseCompositionMember
+  = BracketCompositionMember / CallInPromiseCompositionExpression / Identifier
 
 CompositionExpression
   = head:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
@@ -733,13 +780,10 @@ CompositionExpression
   }
 
 CompositionMember
-  = BracketCompositionMember / BareCompositionMember
-
-BareCompositionMember
-  = CallInCompositionExpression / Identifier
+  = BracketCompositionMember / CallInCompositionExpression / Identifier
 
 BracketCompositionMember
-  = "(" __ m:(SpecialFunctionExpression / ConditionalExpression) __ ")" { return m }
+  = "(" __ m:Expression __ ")" { return m }
 
 ConditionalExpression
   = test:LogicalORExpression __

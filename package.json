@@ -4,10 +4,10 @@
   "description": "Divsense Rio to Javascript Compiler",
   "main": "index.js",
   "scripts": {
-    "gen": "pegjs -o rio.js grammar.pegjs",
+    "gen": "pegjs -o src/rio-parser.js src/grammar.pegjs",
     "js": "pegjs -o temp/js/parser.js temp/js/grammar.pegjs",
-    "index": "node index.js",
     "play": "node play/driver.js",
+    "test": "mocha",
     "jtest": "node temp/js/test.js"
   },
   "repository": {
@@ -28,6 +28,7 @@
   "homepage": "https://github.com/divsense/rio-de-js#readme",
   "devDependencies": {
     "astring": "^1.2.0",
+    "mocha": "^5.0.4",
     "most": "^1.7.3",
     "pegjs": "^0.10.0",
     "ramda": "^0.25.0"
