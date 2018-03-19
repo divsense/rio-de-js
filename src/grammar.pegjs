@@ -81,28 +81,32 @@
     }, []);
   }
 
-    function buildPromiseComposition(id, items) {
+    function fetchBind(list, index) {
+        return list.reduce(function(m, e){ 
+            m.push({
+                type: "CallExpression",
+                arguments: [ e[index] ],
+                callee: {
+                    type: "MemberExpression",
+                    computed: false,
+                    property: {
+                        type: "Identifier",
+                        name: "chain"
+                    },
+                    object: { }
+                }
+            });
+            return m; 
+        }, []);
+    }
+
+    function buildDotComposition(id, items) {
         return items.reduce(function(m,a) {
             a.callee.object = m.type ? m : id
             return a
         }, {})
     }
-    function buildMonadComposition(id, items) {
-        return items.reduce(function(m,a) {
 
-			return {
-				type: "CallExpression",
-				callee: {
-				  type: "MemberExpression",
-				  property: a.callee,
-				  computed: false,
-				  object: m.type ? m : id
-				},
-				arguments: a.arguments
-			}
-
-        }, {})
-    }
 }
 
 Start
@@ -589,6 +593,21 @@ PromiseArgumentList
       return buildList(head, tail, 3);
     }
 
+CallInMonadCompositionExpression
+  = callee:MemberInCompositionExpression __ args:MonadArguments {
+        return { type: "CallExpression", callee: callee, arguments: args };
+      }
+
+MonadArguments
+  = "(" __ args:(MonadArgumentList __)? ")" {
+      return optionalList(extractOptional(args, 0));
+    }
+
+MonadArgumentList
+  = head:InMonadExpression tail:(__ "," __ InMonadExpression)* {
+      return buildList(head, tail, 3);
+    }
+
 Arguments
   = "(" __ args:(ArgumentList __)? ")" {
       return optionalList(extractOptional(args, 0));
@@ -716,21 +735,23 @@ LogicalOROperator
 
 Expression
   = SpecialFunctionExpression
-  / CompositionExpression
-  / PromiseComposition
+  / FunctionCompositionExpression
+  / PromiseCompositionExpression
+  / MonadCompositionExpression
   / CallExpression
   / ConditionalExpression
 
 InPromiseExpression
   = SpecialFunctionExpression
-  / CompositionExpression
+  / FunctionCompositionExpression
+  / MonadCompositionExpression
   / CallExpression
   / ConditionalExpression
 
-AssignmentExpression
+InMonadExpression
   = SpecialFunctionExpression
-  / CompositionExpression
-  / PromiseComposition
+  / FunctionCompositionExpression
+  / PromiseCompositionExpression
   / CallExpression
   / ConditionalExpression
 
@@ -757,9 +778,9 @@ SingleArgumentFunctionExpression
       };
     }
 
-PromiseComposition
+PromiseCompositionExpression
   = head:PromiseCompositionMember tail:(__ ThenCall __ PromiseCompositionMember)* {
-    return buildPromiseComposition(head, fetchThen(tail, 1, 3))
+    return buildDotComposition(head, fetchThen(tail, 1, 3))
   }
 
 ThenCall = ThenToken / CatchToken
@@ -767,7 +788,15 @@ ThenCall = ThenToken / CatchToken
 PromiseCompositionMember
   = BracketCompositionMember / CallInPromiseCompositionExpression / Identifier
 
-CompositionExpression
+MonadCompositionExpression
+  = head:MonadCompositionMember tail:(__ BindToken __ MonadCompositionMember)* {
+    return buildDotComposition(head, fetchBind(tail, 3))
+  }
+
+MonadCompositionMember
+  = BracketCompositionMember / CallInMonadCompositionExpression / Identifier
+
+FunctionCompositionExpression
   = head:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
     return {
         type: "CallExpression",
@@ -822,7 +851,7 @@ Declaration
     }
 
 Initialiser
-  = !">>" "=" !"=" __ expression:AssignmentExpression { return expression; }
+  = !">>" "=" !"=" __ expression:Expression { return expression; }
 
 
 // ----- A.4 Statements -----
