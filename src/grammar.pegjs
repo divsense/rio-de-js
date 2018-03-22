@@ -575,9 +575,14 @@ FormalParameterList
     / p:ObjectPattern { return [p] }                           // ECMAScript 6: Parameter Context Matching
 
 FormalParameterArg
-    = id:Identifier init:(__ "=" __ SingleExpression)? {
-        return id;
+    = id:Identifier __ "=" __ init:SingleExpression {
+        return {
+            type: "AssignmentPattern",
+            left: id,
+            right: init 
+        }
     }
+    / Identifier
 
 ArrowFunctionBody
     = e:SingleExpression {
