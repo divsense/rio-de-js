@@ -7,6 +7,7 @@
     "gen": "pegjs -o src/rio-parser.js src/grammar.pegjs",
     "js": "pegjs -o temp/js/parser.js temp/js/grammar.pegjs",
     "play": "node play/driver.js",
+    "ast": "node play/generate_ast.js",
     "test": "mocha",
     "jtest": "node temp/js/test.js"
   },

@@ -1,54 +1,65 @@
 // Rio Grammar
-// ==================
-//
-
 {
-  function filledArray(count, value) {
-    return Array.apply(null, new Array(count))
-      .map(function() { return value; });
-  }
+    function optionalList(value) {
+        return value !== null ? value : [];
+    }
 
-  function extractOptional(optional, index) {
-    return optional ? optional[index] : null;
-  }
+    function extractOptional(optional, index) {
+        return optional ? optional[index] : null;
+    }
 
-  function extractList(list, index) {
-    return list.map(function(element) { return element[index]; });
-  }
+    function extractList(list, index) {
+        return list.map(function(element) { return element[index]; });
+    }
 
-  function buildList(head, tail, index) {
-    return [head].concat(extractList(tail, index));
-  }
+    function buildList(head, tail, index) {
+        return [head].concat(extractList(tail, index));
+    }
 
-  function buildBinaryExpression(head, tail) {
-    return tail.reduce(function(result, element) {
-      return {
-        type: "BinaryExpression",
-        operator: element[1],
-        left: result,
-        right: element[3]
-      };
-    }, head);
-  }
+    function extractPairs(list, a, b) {
+        return list.map(function(el) { return [ el[a], el[b] ]; });
+    }
 
-  function buildLogicalExpression(head, tail) {
-    return tail.reduce(function(result, element) {
-      return {
-        type: "LogicalExpression",
-        operator: element[1],
-        left: result,
-        right: element[3]
-      };
-    }, head);
-  }
+    function buildDotCall(list) {
+        return list.reduce(function(m, e){ 
+            m.push({
+                type: "CallExpression",
+                arguments: [ e[1] ],
+                callee: {
+                    type: "MemberExpression",
+                    computed: false,
+                    property: {
+                        type: "Identifier",
+                        name: e[0]
+                    },
+                    object: { }
+                }
+            });
+            return m; 
+        }, []);
+    }
 
-  function optionalList(value) {
-    return value !== null ? value : [];
-  }
+    function buildBinaryExpression(head, tail) {
+        return tail.reduce(function(result, element) {
+          return {
+            type: "BinaryExpression",
+            operator: element[1],
+            left: result,
+            right: element[3]
+          };
+        }, head);
+    }
 
-  function flattenList(list, index) {
-    return list.map(function(x) { return x[index] })
-  }
+    function buildLogicalExpression(head, tail) {
+        return tail.reduce(function(result, element) {
+          return {
+            type: "LogicalExpression",
+            operator: element[1],
+            left: result,
+            right: element[3]
+          };
+        }, head);
+    }
 
     function buildExportList(head, tail, index) {
         return buildList(head, tail, index)
@@ -62,55 +73,551 @@
                 });
     }
 
-  function fetchThen(list, a, b) {
-    return list.reduce(function(m, e){ 
-        m.push({
-            type: "CallExpression",
-            arguments: [ e[b] ],
-            callee: {
-                type: "MemberExpression",
-                computed: false,
-                property: {
-                    type: "Identifier",
-                    name: e[a][0] === ">>>" ? "then" : "catch"
-                },
-                object: { }
-            }
-        });
-        return m; 
-    }, []);
-  }
-
-    function fetchBind(list, index) {
-        return list.reduce(function(m, e){ 
-            m.push({
-                type: "CallExpression",
-                arguments: [ e[index] ],
-                callee: {
-                    type: "MemberExpression",
-                    computed: false,
-                    property: {
-                        type: "Identifier",
-                        name: "chain"
-                    },
-                    object: { }
-                }
-            });
-            return m; 
-        }, []);
-    }
-
-    function buildDotComposition(id, items) {
+    function buildDotCompositionExpression(head, items, token) {
         return items.reduce(function(m,a) {
-            a.callee.object = m.type ? m : id
+            a.callee.object = m.type ? m : head
             return a
         }, {})
     }
 
+    function buildCompositionExpression(head, tail, method) {
+        return {
+            type: "CallExpression",
+            callee: {
+              type: "Identifier",
+              name: method
+            },
+            arguments: [head].concat(tail)
+        };
+    }
+
 }
+
+/////////////////////////////////////////////
 
 Start
   = __ program:Program __ { return program; }
+
+Program
+  = body:SourceElements? {
+      return {
+        type: "Program",
+        body: optionalList(body)
+      };
+    }
+
+SourceElements
+  = head:SourceElement tail:(__ SourceElement)* {
+      return buildList(head, tail, 1);
+    }
+
+SourceElement
+  = Statement
+
+Statement
+  = Block
+  / DeclarationStatement
+  / EmptyStatement
+  / ExpressionStatement
+  / IfStatement
+  / BreakStatement
+  / ReturnStatement
+  / SwitchStatement
+  / ExportStatement
+  / ImportStatement
+
+Block
+  = "{" __ body:(StatementList __)? "}" {
+      return {
+        type: "BlockStatement",
+        body: optionalList(extractOptional(body, 0))
+      };
+  }
+
+StatementList
+  = head:Statement tail:(__ Statement)* {
+      return buildList(head, tail, 1);
+}
+
+EmptyStatement
+  = ";" { return { type: "EmptyStatement" }; }
+
+DeclarationStatement
+  = __ declaration:Declaration EOS {
+      return {
+        type: "VariableDeclaration",
+        declarations: [declaration],
+        kind: "const"
+      };
+    }
+
+Declaration
+  = id:Identifier __ "=" __ init:(__ SingleExpression)? {
+      return {
+        type: "VariableDeclarator",
+        id: id,
+        init: extractOptional(init, 1)
+      };
+    }
+
+ExpressionStatement
+  = !("{" / ArrowToken) expression:SingleExpression EOS {
+      return {
+        type: "ExpressionStatement",
+        expression: expression
+      };
+    }
+
+IfStatement
+  = IfToken __ "(" __ test:SingleExpression __ ")" __
+    consequent:Statement __
+    ElseToken __
+    alternate:Statement
+    {
+      return {
+        type: "IfStatement",
+        test: test,
+        consequent: consequent,
+        alternate: alternate
+      };
+    }
+  / IfToken __ "(" __ test:SingleExpression __ ")" __
+    consequent:Statement {
+      return {
+        type: "IfStatement",
+        test: test,
+        consequent: consequent,
+        alternate: null
+      };
+    }
+
+BreakStatement
+  = BreakToken EOS {
+      return { type: "BreakStatement", label: null };
+    }
+  / BreakToken _ label:Identifier EOS {
+      return { type: "BreakStatement", label: label };
+    }
+
+ReturnStatement
+  = ReturnToken EOS {
+      return { type: "ReturnStatement", argument: null };
+    }
+  / ReturnToken _ argument:SingleExpression EOS {
+      return { type: "ReturnStatement", argument: argument };
+    }
+
+SwitchStatement
+  = SwitchToken __ "(" __ discriminant:SingleExpression __ ")" __
+    cases:CaseBlock
+    {
+      return {
+        type: "SwitchStatement",
+        discriminant: discriminant,
+        cases: cases
+      };
+    }
+
+CaseBlock
+  = "{" __ clauses:(CaseClauses __)? "}" {
+      return optionalList(extractOptional(clauses, 0));
+    }
+  / "{" __
+    before:(CaseClauses __)?
+    default_:DefaultClause __
+    after:(CaseClauses __)? "}"
+    {
+      return optionalList(extractOptional(before, 0))
+        .concat(default_)
+        .concat(optionalList(extractOptional(after, 0)));
+    }
+
+CaseClauses
+  = head:CaseClause tail:(__ CaseClause)* { return buildList(head, tail, 1); }
+
+CaseClause
+  = CaseToken __ test:SingleExpression __ ":" consequent:(__ StatementList)? {
+      return {
+        type: "SwitchCase",
+        test: test,
+        consequent: optionalList(extractOptional(consequent, 1))
+      };
+    }
+
+DefaultClause
+  = DefaultToken __ ":" consequent:(__ StatementList)? {
+      return {
+        type: "SwitchCase",
+        test: null,
+        consequent: optionalList(extractOptional(consequent, 1))
+      };
+    }
+
+ExportStatement
+  = ExportToken _ head:Identifier tail:(__ "," __ Identifier)* {
+      return {
+        type: "ReturnStatement",
+        argument: {
+            type: "ObjectExpression",
+            properties: buildExportList(head, tail, 3)
+        }
+      };
+  }
+
+ImportStatement
+  = "import" _ url:StringLiteral __ "!{" __ head:ImportSpec tail:(__ "," __ ImportSpec)* __ "}" EOS {
+	return {
+		type: "ImportDeclaration",
+		source: url,
+		specifiers: buildList(head, tail, 3),
+        exclusive: true
+    }
+  }
+  / "import" _ url:StringLiteral __ "{" __ head:ImportSpec tail:(__ "," __ ImportSpec)* __ "}" EOS {
+	return {
+		type: "ImportDeclaration",
+		source: url,
+		specifiers: buildList(head, tail, 3)
+    }
+  }
+  / "import" _ url:StringLiteral EOS {
+	return {
+		type: "ImportDeclaration",
+		source: url,
+    }
+  }
+
+ImportSpec
+  = id:Identifier _ "as" _ name:Identifier {
+	return {
+		type: "ImportSpecifier",
+        imported: id,
+		local: name
+    }
+  }
+  / id:Identifier {
+	return {
+		type: "ImportSpecifier",
+        imported: id
+    }
+  }
+
+SingleExpression
+    = ConditionalExpression
+
+ConditionalExpression
+    = test:DotCompositionExpression __
+        "?" __ consequent:SingleExpression __
+        ":" __ alternate:SingleExpression
+        {
+          return {
+            type: "ConditionalExpression",
+            test: test,
+            consequent: consequent,
+            alternate: alternate
+          };
+        }
+    / DotCompositionExpression
+
+DotCompositionExpression
+  = head:PromiseCompositionExpression
+    tail:(__ DotCompositionToken __ PromiseCompositionExpression)*
+    {
+        return !tail.length ? head : buildDotCompositionExpression(head, buildDotCall(extractPairs(tail, 1, 3))); 
+    }
+
+PromiseCompositionExpression
+  = head:MonadCompositionExpression
+    tail:(__ PromiseCompositionToken __ MonadCompositionExpression)*
+    { 
+        return !tail.length ? head : buildCompositionExpression(head, extractList(tail, 3), "composeP");
+    }
+
+MonadCompositionExpression
+  = head:FunctionCompositionExpression
+    tail:(__ MonadCompositionToken __ FunctionCompositionExpression)*
+    { 
+        return !tail.length ? head : buildCompositionExpression(head, extractList(tail, 3), "composeK"); 
+    }
+
+FunctionCompositionExpression
+  = head:LogicalORExpression
+    tail:(" . " LogicalORExpression)*
+    { 
+        return !tail.length ? head : buildCompositionExpression(head, extractList(tail, 1), "compose");
+    }
+
+LogicalORExpression
+  = head:LogicalANDExpression
+    tail:(__ "||" __ LogicalANDExpression)*
+    { return buildLogicalExpression(head, tail); }
+
+LogicalANDExpression
+  = head:BitwiseORExpression
+    tail:(__ "&&" __ BitwiseORExpression)*
+    { return buildLogicalExpression(head, tail); }
+
+BitwiseORExpression
+  = head:BitwiseXORExpression
+    tail:(__ "|" __ BitwiseXORExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+BitwiseXORExpression
+  = head:BitwiseANDExpression
+    tail:(__ "^" __ BitwiseANDExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+BitwiseANDExpression
+  = head:EqualityExpression
+    tail:(__ "&" __ EqualityExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+EqualityExpression
+  = head:RelationalExpression
+    tail:(__ EqualityOperator __ RelationalExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+EqualityOperator
+  = "==="
+  / "!=="
+  / "=="
+  / "!="
+
+RelationalExpression
+  = head:ShiftExpression
+    tail:(__ RelationalOperator __ ShiftExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+RelationalOperator
+  = "<="
+  / ">="
+  / $("<" !"<")
+  / $(!"-" ">" !">")
+
+ShiftExpression
+  = head:AdditiveExpression
+    tail:(__ ShiftOperator __ AdditiveExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+ShiftOperator
+  = $("<<"  !"=")
+  / $(">>"  !"=")
+
+AdditiveExpression
+  = head:MultiplicativeExpression
+    tail:(__ AdditiveOperator __ MultiplicativeExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+AdditiveOperator
+  = $("+" ![+=])
+  / $("-" ![-=>])
+
+MultiplicativeExpression
+  = head:UnaryExpression
+    tail:(__ MultiplicativeOperator __ UnaryExpression)*
+    { return buildBinaryExpression(head, tail); }
+
+MultiplicativeOperator
+  = $("*" !"=")
+  / $("/" !"=")
+  / $("%" !"=")
+
+UnaryExpression
+  = CallExpression
+  / PrimaryExpression
+  / operator:UnaryOperator __ argument:UnaryExpression {
+      return {
+        type: "UnaryExpression",
+        operator: operator,
+        argument: argument,
+        prefix: true
+      };
+    }
+
+UnaryOperator
+  = $("+" !"=")
+  / $("-" !"=")
+  / "~"
+  / "!"
+
+CallExpression
+  = head:(
+      callee:CalleeExpression __ args:Arguments {
+        return { type: "CallExpression", callee: callee, arguments: args };
+      }
+    )
+    tail:(
+        __ args:Arguments {
+          return { type: "CallExpression", arguments: args };
+        }
+    )*
+    {
+      return tail.reduce(function(result, element) {
+        element.callee = result;
+        return element;
+      }, head);
+    }
+
+Arguments
+    = "()" { return [] }
+    / '(' __ head:Argument tail:(__ ',' __ Argument)* __ ')' {
+        return buildList(head, tail, 3)
+    }
+
+Argument
+    = SpreadElement
+    / SingleExpression
+
+SpreadElement                                  
+    = EllipsisToken id:Identifier {  // ECMAScript 6: Spread Operator
+        return {
+            type: "SpreadElement",
+            argument: id
+        }
+    }
+
+CalleeExpression
+    = Identifier
+    / "(" __ expression:SingleExpression __ ")" {
+        return expression; 
+}
+
+PrimaryExpression
+  = ArrowFunction
+  / Identifier
+  / Literal
+  / ArrayLiteral
+  / ObjectLiteral
+  / "(" __ expression:SingleExpression __ ")" { return expression; }
+
+ArrowFunction
+  = params:ArrowFunctionParameters __ ArrowToken __ func:ArrowFunctionBody { // ECMAScript 6
+      return {
+        type: "ArrowFunctionExpression",
+        params: params,
+        body: func.body,
+        expression: func.isExpression
+      };
+  }
+
+ArrayLiteral
+  = "[" __ elision:(Elision __)? "]" {
+      return {
+        type: "ArrayExpression",
+        elements: optionalList(extractOptional(elision, 0))
+      };
+    }
+  / "[" __ elements:ElementList __ "]" {
+      return {
+        type: "ArrayExpression",
+        elements: elements
+      };
+    }
+  / "[" __ elements:ElementList __ "," __ elision:(Elision __)? "]" {
+      return {
+        type: "ArrayExpression",
+        elements: elements.concat(optionalList(extractOptional(elision, 0)))
+      };
+    }
+
+ElementList
+  = head:(
+      elision:(Elision __)? element:SingleExpression {
+        return optionalList(extractOptional(elision, 0)).concat(element);
+      }
+    )
+    tail:(
+      __ "," __ elision:(Elision __)? element:SingleExpression {
+        return optionalList(extractOptional(elision, 0)).concat(element);
+      }
+    )*
+    { return Array.prototype.concat.apply(head, tail); }
+
+Elision
+  = "," commas:(__ ",")* { return filledArray(commas.length + 1, null); }
+
+ObjectLiteral
+  = "{" __ "}" { return { type: "ObjectExpression", properties: [] }; }
+  / "{" __ properties:PropertyNameAndValueList __ "}" {
+       return { type: "ObjectExpression", properties: properties };
+     }
+  / "{" __ properties:PropertyNameAndValueList __ "," __ "}" {
+       return { type: "ObjectExpression", properties: properties };
+     }
+PropertyNameAndValueList
+  = head:PropertyAssignment tail:(__ "," __ PropertyAssignment)* {
+      return buildList(head, tail, 3);
+    }
+
+PropertyAssignment
+  = key:PropertyName __ ":" __ value:SingleExpression {
+      return { type: "Property", key: key, value: value, kind: "init" };
+    }
+
+PropertyName
+  = IdentifierName
+  / StringLiteral
+  / NumericLiteral
+
+PropertySetParameterList
+  = id:Identifier { return [id]; }
+
+ArrowFunctionParameters
+    = id:Identifier { return [id] }
+    / '(' __ params:FormalParameterList? __ ')' {
+        return params || [];
+    }
+
+FormalParameterList
+    = head:FormalParameterArg tail:(__ ',' __ FormalParameterArg)* {
+        return buildList(head, tail, 3)
+    }
+    /*
+    / ArrayLiteral                            // ECMAScript 6: Parameter Context Matching
+    / ObjectLiteral                           // ECMAScript 6: Parameter Context Matching
+    */
+
+FormalParameterArg
+    = id:Identifier init:(__ "=" __ SingleExpression)? {
+        return id;
+    }
+
+ArrowFunctionBody
+    = e:SingleExpression {
+        return {
+            body: e,
+            isExpression: true
+        }
+    }
+    / '{' __ body:SourceElements? __ '}' {
+        return {
+            body: {
+                type: "BlockStatement",
+                body: optionalList(body)
+            },
+            isExpression: false
+        };
+    }
+
+//=============================================================================
+
+// Skipped
+__
+  = (WhiteSpace / LineTerminatorSequence / Comment)*
+
+_
+  = (WhiteSpace / MultiLineCommentNoLineTerminator)*
+
+// Automatic Semicolon Insertion
+
+EOS
+  = __ ";"
+  / _ SingleLineComment? LineTerminatorSequence
+  / _ &"}"
+  / __ EOF
+
+EOF
+  = !.
 
 // ----- A.1 Lexical Grammar -----
 
@@ -207,13 +714,6 @@ Keyword
   / IfToken
   / ReturnToken
   / SwitchToken
-  / ArrowToken
-  / BindToken
-  / ThenToken
-  / CatchToken
-  / MapToken
-  / ApplyToken
-  / FishToken
 
 Literal
   = NullLiteral
@@ -435,13 +935,6 @@ ElseToken       = "else"       !IdentifierPart
 EnumToken       = "enum"       !IdentifierPart
 ExportToken     = "export"     !IdentifierPart
 FalseToken      = "false"      !IdentifierPart
-ArrowToken      = "->"         !IdentifierPart
-BindToken       = ">>="         !IdentifierPart
-FishToken       = ">=>"         !IdentifierPart
-MapToken        = "<$>"         !IdentifierPart
-ApplyToken      = "<*>"         !IdentifierPart
-ThenToken       = ">>>"         !IdentifierPart
-CatchToken      = "!>>"         !IdentifierPart
 IfToken         = "if"         !IdentifierPart
 ImportToken     = "import"     !IdentifierPart
 NullToken       = "null"       !IdentifierPart
@@ -449,641 +942,29 @@ ReturnToken     = "return"     !IdentifierPart
 SwitchToken     = "switch"     !IdentifierPart
 TrueToken       = "true"       !IdentifierPart
 
-// Skipped
-
-__
-  = (WhiteSpace / LineTerminatorSequence / Comment)*
-
-_
-  = (WhiteSpace / MultiLineCommentNoLineTerminator)*
-
-// Automatic Semicolon Insertion
-
-EOS
-  = __ ";"
-  / _ SingleLineComment? LineTerminatorSequence
-  / _ &"}"
-  / __ EOF
-
-EOF
-  = !.
-
-// ----- A.2 Number Conversions -----
-
-// Irrelevant.
-
-// ----- A.3 Expressions -----
-
-PrimaryExpression
-  = Identifier
-  / Literal
-  / ArrayLiteral
-  / ObjectLiteral
-  / "(" __ expression:Expression __ ")" { return expression; }
-
-ArrayLiteral
-  = "[" __ elision:(Elision __)? "]" {
-      return {
-        type: "ArrayExpression",
-        elements: optionalList(extractOptional(elision, 0))
-      };
-    }
-  / "[" __ elements:ElementList __ "]" {
-      return {
-        type: "ArrayExpression",
-        elements: elements
-      };
-    }
-  / "[" __ elements:ElementList __ "," __ elision:(Elision __)? "]" {
-      return {
-        type: "ArrayExpression",
-        elements: elements.concat(optionalList(extractOptional(elision, 0)))
-      };
-    }
-
-ElementList
-  = head:(
-      elision:(Elision __)? element:Expression {
-        return optionalList(extractOptional(elision, 0)).concat(element);
-      }
-    )
-    tail:(
-      __ "," __ elision:(Elision __)? element:Expression {
-        return optionalList(extractOptional(elision, 0)).concat(element);
-      }
-    )*
-    { return Array.prototype.concat.apply(head, tail); }
-
-Elision
-  = "," commas:(__ ",")* { return filledArray(commas.length + 1, null); }
-
-ObjectLiteral
-  = "{" __ "}" { return { type: "ObjectExpression", properties: [] }; }
-  / "{" __ properties:PropertyNameAndValueList __ "}" {
-       return { type: "ObjectExpression", properties: properties };
-     }
-  / "{" __ properties:PropertyNameAndValueList __ "," __ "}" {
-       return { type: "ObjectExpression", properties: properties };
-     }
-PropertyNameAndValueList
-  = head:PropertyAssignment tail:(__ "," __ PropertyAssignment)* {
-      return buildList(head, tail, 3);
-    }
-
-PropertyAssignment
-  = key:PropertyName __ ":" __ value:Expression {
-      return { type: "Property", key: key, value: value, kind: "init" };
-    }
-
-PropertyName
-  = IdentifierName
-  / StringLiteral
-  / NumericLiteral
-
-PropertySetParameterList
-  = id:Identifier { return [id]; }
-
-MemberExpression
-  = PrimaryExpression / FunctionExpression
-
-CallExpression
-  = head:(
-      callee:MemberExpression __ args:Arguments {
-        return { type: "CallExpression", callee: callee, arguments: args };
-      }
-    )
-    tail:(
-        __ args:Arguments {
-          return { type: "CallExpression", arguments: args };
-        }
-    )*
-    {
-      return tail.reduce(function(result, element) {
-        element.callee = result;
-
-        return element;
-      }, head);
-    }
-
-StrictCallExpression
-  = callee:Identifier __ args:Arguments {
-        return { type: "CallExpression", callee: callee, arguments: args };
-      }
-
-MemberInCompositionExpression
-  = e:( Identifier / FunctionExpression){ return e }
-
-CallInCompositionExpression
-  = callee:MemberInCompositionExpression __ args:Arguments {
-        return { type: "CallExpression", callee: callee, arguments: args };
-      }
-
-CallInPromiseCompositionExpression
-  = callee:MemberInCompositionExpression __ args:PromiseArguments {
-        return { type: "CallExpression", callee: callee, arguments: args };
-      }
-
-PromiseArguments
-  = "(" __ args:(PromiseArgumentList __)? ")" {
-      return optionalList(extractOptional(args, 0));
-    }
-
-PromiseArgumentList
-  = head:InPromiseExpression tail:(__ "," __ InPromiseExpression)* {
-      return buildList(head, tail, 3);
-    }
-
-CallInMonadCompositionExpression
-  = callee:MemberInCompositionExpression __ args:MonadArguments {
-        return { type: "CallExpression", callee: callee, arguments: args };
-      }
-
-MonadArguments
-  = "(" __ args:(MonadArgumentList __)? ")" {
-      return optionalList(extractOptional(args, 0));
-    }
-
-MonadArgumentList
-  = head:InMonadExpression tail:(__ "," __ InMonadExpression)* {
-      return buildList(head, tail, 3);
-    }
-
-Arguments
-  = "(" __ args:(ArgumentList __)? ")" {
-      return optionalList(extractOptional(args, 0));
-    }
-
-ArgumentList
-  = head:Expression tail:(__ "," __ Expression)* {
-      return buildList(head, tail, 3);
-    }
-
-LeftHandSideExpression
-  = CallExpression
-  / MemberExpression
-
-PostfixExpression
-  = LeftHandSideExpression
-
-UnaryExpression
-  = PostfixExpression
-  / operator:UnaryOperator __ argument:UnaryExpression {
-      return {
-        type: 'UnaryExpression',
-        operator: operator,
-        argument: argument,
-        prefix: true
-      };
-    }
-
-UnaryOperator
-  = $("+" ![+=])
-  / $("-" ![-=>])
-  / "~"
-  / "!"
-
-MultiplicativeExpression
-  = head:UnaryExpression
-    tail:(__ MultiplicativeOperator __ UnaryExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-MultiplicativeOperator
-  = $("*" !"=")
-  / $("/" !"=")
-  / $("%" !"=")
-
-AdditiveExpression
-  = head:MultiplicativeExpression
-    tail:(__ AdditiveOperator __ MultiplicativeExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-AdditiveOperator
-  = $("+" ![+=])
-  / $("-" ![-=>])
-
-ShiftExpression
-  = head:AdditiveExpression
-    tail:(__ ShiftOperator __ AdditiveExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-ShiftOperator
-  = $("<<"  !"=")
-  / $(">>>" !"=")
-  / $(">>"  !"=")
-
-RelationalExpression
-  = head:ShiftExpression
-    tail:(__ RelationalOperator __ ShiftExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-RelationalOperator
-  = "<="
-  / $(!">" ">=")
-  / $("<" !"<")
-  / $(">" !">")
-
-EqualityExpression
-  = head:RelationalExpression
-    tail:(__ EqualityOperator __ RelationalExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-EqualityOperator
-  = "==="
-  / "!=="
-  / "=="
-  / "!="
-
-BitwiseANDExpression
-  = head:EqualityExpression
-    tail:(__ BitwiseANDOperator __ EqualityExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-BitwiseANDOperator
-  = $("&" ![&=])
-
-BitwiseXORExpression
-  = head:BitwiseANDExpression
-    tail:(__ BitwiseXOROperator __ BitwiseANDExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-BitwiseXOROperator
-  = $("^" !"=")
-
-BitwiseORExpression
-  = head:BitwiseXORExpression
-    tail:(__ BitwiseOROperator __ BitwiseXORExpression)*
-    { return buildBinaryExpression(head, tail); }
-
-BitwiseOROperator
-  = $("|" ![|=])
-
-LogicalANDExpression
-  = head:BitwiseORExpression
-    tail:(__ LogicalANDOperator __ BitwiseORExpression)*
-    { return buildLogicalExpression(head, tail); }
-
-LogicalANDOperator
-  = "&&"
-
-LogicalORExpression
-  = head:LogicalANDExpression
-    tail:(__ LogicalOROperator __ LogicalANDExpression)*
-    { return buildLogicalExpression(head, tail); }
-
-LogicalOROperator
-  = "||"
-
-Expression
-  = SpecialFunctionExpression
-  / FunctionCompositionExpression
-  / PromiseCompositionExpression
-  / MonadCompositionExpression
-  / CallExpression
-  / ConditionalExpression
-
-InPromiseExpression
-  = SpecialFunctionExpression
-  / FunctionCompositionExpression
-  / MonadCompositionExpression
-  / CallExpression
-  / ConditionalExpression
-
-InMonadExpression
-  = SpecialFunctionExpression
-  / FunctionCompositionExpression
-  / PromiseCompositionExpression
-  / CallExpression
-  / ConditionalExpression
-
-SpecialFunctionExpression
-  = SingleArgumentFunctionExpression / EmptyArgumentFunctionExpression
-
-EmptyArgumentFunctionExpression
-  = "(" _ ")" __ body:FunctionBody {
-      return {
-        type: "FunctionExpression",
-        id: null,
-        params: [],
-        body: optionalList(body)
-      };
-    }
-
-SingleArgumentFunctionExpression
-  = param:Identifier __ body:FunctionBody {
-      return {
-        type: "FunctionExpression",
-        id: null,
-        params: [param],
-        body: optionalList(body)
-      };
-    }
-
-PromiseCompositionExpression
-  = head:PromiseCompositionMember tail:(__ ThenCall __ PromiseCompositionMember)* {
-    return buildDotComposition(head, fetchThen(tail, 1, 3))
-  }
-
-ThenCall = ThenToken / CatchToken
-
-PromiseCompositionMember
-  = BracketCompositionMember / CallInPromiseCompositionExpression / Identifier
-
-MonadCompositionExpression
-  = head:MonadCompositionMember tail:(__ BindToken __ MonadCompositionMember)* {
-    return buildDotComposition(head, fetchBind(tail, 3))
-  }
-
-MonadCompositionMember
-  = BracketCompositionMember / CallInMonadCompositionExpression / Identifier
-
-FunctionCompositionExpression
-  = head:CompositionMember __ "." __ snd:CompositionMember tail:(__ "." __ CompositionMember)* {
-    return {
-        type: "CallExpression",
-        callee: {
-          type: "Identifier",
-          name: "compose"
-        },
-        arguments: [head].concat(buildList(snd, tail, 3))
-    };
-  }
-
-CompositionMember
-  = BracketCompositionMember / CallInCompositionExpression / Identifier
-
-BracketCompositionMember
-  = "(" __ m:Expression __ ")" { return m }
-
-ConditionalExpression
-  = test:LogicalORExpression __
-    "?" __ consequent:Expression __
-    ":" __ alternate:Expression
-    {
-      return {
-        type: "ConditionalExpression",
-        test: test,
-        consequent: consequent,
-        alternate: alternate
-      };
-    }
-  / LogicalORExpression
-
-ConditionalExpressionOnly
-  = test:LogicalORExpression __
-    "?" __ consequent:Expression __
-    ":" __ alternate:Expression
-    {
-      return {
-        type: "ConditionalExpression",
-        test: test,
-        consequent: consequent,
-        alternate: alternate
-      };
-    }
-
-Declaration
-  = id:Identifier init:(__ Initialiser)? {
-      return {
-        type: "VariableDeclarator",
-        id: id,
-        init: extractOptional(init, 1)
-      };
-    }
-
-Initialiser
-  = !">>" "=" !"=" __ expression:Expression { return expression; }
-
-
-// ----- A.4 Statements -----
-
-Statement
-  = Block
-  / EmptyStatement
-  / DeclarationStatement
-  / ExpressionStatement
-  / IfStatement
-  / BreakStatement
-  / ReturnStatement
-  / SwitchStatement
-  / ExportStatement
-  / ImportStatement
-
-Block
-  = "{" __ body:(StatementList __)? "}" {
-      return {
-        type: "BlockStatement",
-        body: optionalList(extractOptional(body, 0))
-      };
-    }
-
-StatementList
-  = head:Statement tail:(__ Statement)* { return buildList(head, tail, 1); }
-
-EmptyStatement
-  = ";" { return { type: "EmptyStatement" }; }
-
-DeclarationStatement
-  = __ declaration:Declaration EOS {
-      return {
-        type: "VariableDeclaration",
-        declarations: [declaration],
-        kind: "const"
-      };
-    }
-
-ExpressionStatement
-  = !("{" / ArrowToken) expression:Expression EOS {
-      return {
-        type: "ExpressionStatement",
-        expression: expression
-      };
-    }
-
-IfStatement
-  = IfToken __ "(" __ test:Expression __ ")" __
-    consequent:Statement __
-    ElseToken __
-    alternate:Statement
-    {
-      return {
-        type: "IfStatement",
-        test: test,
-        consequent: consequent,
-        alternate: alternate
-      };
-    }
-  / IfToken __ "(" __ test:Expression __ ")" __
-    consequent:Statement {
-      return {
-        type: "IfStatement",
-        test: test,
-        consequent: consequent,
-        alternate: null
-      };
-    }
-
-BreakStatement
-  = BreakToken EOS {
-      return { type: "BreakStatement", label: null };
-    }
-  / BreakToken _ label:Identifier EOS {
-      return { type: "BreakStatement", label: label };
-    }
-
-ReturnStatement
-  = ReturnToken EOS {
-      return { type: "ReturnStatement", argument: null };
-    }
-  / ReturnToken _ argument:(ConditionalExpressionOnly / Expression) EOS {
-      return { type: "ReturnStatement", argument: argument };
-    }
-
-SwitchStatement
-  = SwitchToken __ "(" __ discriminant:Expression __ ")" __
-    cases:CaseBlock
-    {
-      return {
-        type: "SwitchStatement",
-        discriminant: discriminant,
-        cases: cases
-      };
-    }
-
-CaseBlock
-  = "{" __ clauses:(CaseClauses __)? "}" {
-      return optionalList(extractOptional(clauses, 0));
-    }
-  / "{" __
-    before:(CaseClauses __)?
-    default_:DefaultClause __
-    after:(CaseClauses __)? "}"
-    {
-      return optionalList(extractOptional(before, 0))
-        .concat(default_)
-        .concat(optionalList(extractOptional(after, 0)));
-    }
-
-CaseClauses
-  = head:CaseClause tail:(__ CaseClause)* { return buildList(head, tail, 1); }
-
-CaseClause
-  = CaseToken __ test:Expression __ ":" consequent:(__ StatementList)? {
-      return {
-        type: "SwitchCase",
-        test: test,
-        consequent: optionalList(extractOptional(consequent, 1))
-      };
-    }
-
-DefaultClause
-  = DefaultToken __ ":" consequent:(__ StatementList)? {
-      return {
-        type: "SwitchCase",
-        test: null,
-        consequent: optionalList(extractOptional(consequent, 1))
-      };
-    }
-
-ExportStatement
-  = ExportToken _ head:Identifier tail:(__ "," __ Identifier)* {
-      return {
-        type: "ReturnStatement",
-        argument: {
-            type: "ObjectExpression",
-            properties: buildExportList(head, tail, 3)
-        }
-      };
-  }
-
-ImportStatement
-  = "import" _ url:StringLiteral __ "!{" __ head:ImportSpec tail:(__ "," __ ImportSpec)* __ "}" EOS {
-	return {
-		type: "ImportDeclaration",
-		source: url,
-		specifiers: buildList(head, tail, 3),
-        exclusive: true
-    }
-  }
-  / "import" _ url:StringLiteral __ "{" __ head:ImportSpec tail:(__ "," __ ImportSpec)* __ "}" EOS {
-	return {
-		type: "ImportDeclaration",
-		source: url,
-		specifiers: buildList(head, tail, 3)
-    }
-  }
-  / "import" _ url:StringLiteral EOS {
-	return {
-		type: "ImportDeclaration",
-		source: url,
-    }
-  }
-
-ImportSpec
-  = id:Identifier _ "as" _ name:Identifier {
-	return {
-		type: "ImportSpecifier",
-        imported: id,
-		local: name
-    }
-  }
-  / id:Identifier {
-	return {
-		type: "ImportSpecifier",
-        imported: id
-    }
-  }
-
-
-// ----- A.5 Functions and Programs -----
-
-FunctionExpression
-  = "(" __ params:(FormalParameterList __)? ")" __ body:FunctionBody {
-      return {
-          type: "FunctionExpression",
-          id: null,
-          params: optionalList(extractOptional(params, 0)),
-          body: optionalList(body)
-      };
-    }
-
-FormalParameterList
-  = head:Identifier tail:(__ "," __ Identifier)* {
-      return buildList(head, tail, 3);
-    }
-
-FunctionBody
- = ArrowToken __ body:FunctionBlockBody { return body; }
- / ArrowToken __ body:FunctionOneLiner { return body; }
-
-FunctionBlockBody
-  = "{" __ body:SourceElements? __ "}" {
-      return {
-        type: "BlockStatement",
-        body: optionalList(body)
-      };
-    }
-
-FunctionOneLiner
-  = !"{" body:(ConditionalExpressionOnly / Expression) {
-      return {
-        type: "BlockStatement",
-        body: [{type: "ReturnStatement", argument: body}]
-      };
-    }
-
-Program
-  = body:SourceElements? {
-      return {
-        type: "Program",
-        body: optionalList(body)
-      };
-    }
-
-SourceElements
-  = head:SourceElement tail:(__ SourceElement)* {
-      return buildList(head, tail, 1);
-    }
-
-SourceElement
-  = Statement
+EllipsisToken   = "..."
+ArrowToken      = "->"
+BindToken       = ">>="
+ConcatToken     = "++"
+ApplyToken      = "<*>"
+AltToken        = "<|>"
+ThenToken       = ">>>"
+CatchToken      = "!>>"
+
+FunctionCompositionToken = " . "
+MonadCompositionToken    = "<=<"
+PromiseCompositionToken  = "<<>"
+
+DotCompositionToken
+    = ConcatToken { return "concat" }
+    / BindToken { return "chain" }
+    / ApplyToken { return "ap" }
+    / AltToken { return "alt" }
+    / ThenToken { return "then" }
+    / CatchToken { return "catch" }
+
+
+
+
+//////////////////////////////////////////////
 

@@ -26,9 +26,13 @@ const findUnresolvedDeclaration = (state, node) => {
         return state
     }
 
-    if(node.type === 'FunctionExpression') {
+    if(node.type === 'ArrowFunctionExpression') {
         const _state = over(lensProp('scope'), append(map(prop('name'), node.params)), state)
-        const s = reduce(findUnresolvedDeclaration, _state, node.body.body || [])
+
+        const s = (node.body.type === 'BlockStatement')
+                    ? reduce(findUnresolvedDeclaration, _state, node.body.body)
+                    : findUnresolvedDeclaration(_state, node.body)
+
         return setScope(state.scope, s)
 
     } else if(node.type === 'VariableDeclaration') {
