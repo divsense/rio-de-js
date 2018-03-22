@@ -20,6 +20,22 @@ const verifyId = (scope, name) => {
     return verifyId(dropLast(1, scope), name)
 }
 
+const addFunctionParams = params => scope => reduce((m,p) => {
+
+    if(p.type === 'ObjectPattern') {
+
+        return append(map(path(['key','name']), p.properties), m)
+
+    } else if(p.type === 'ArrayPattern') {
+
+        return append(map(prop('name'), p.elements), m)
+
+    } else {
+        return append(prop('name', p), m)
+    }
+
+}, scope, params)
+
 // findUnresolvedDeclaration :: (State, Node) -> State
 const findUnresolvedDeclaration = (state, node) => {
     if(state.result) {
@@ -27,7 +43,7 @@ const findUnresolvedDeclaration = (state, node) => {
     }
 
     if(node.type === 'ArrowFunctionExpression') {
-        const _state = over(lensProp('scope'), append(map(prop('name'), node.params)), state)
+        const _state = over(lensProp('scope'), addFunctionParams(node.params), state)
 
         const s = (node.body.type === 'BlockStatement')
                     ? reduce(findUnresolvedDeclaration, _state, node.body.body)
@@ -39,12 +55,18 @@ const findUnresolvedDeclaration = (state, node) => {
         //const ids = map(path(['id','name']), node.declarations || [])
 
         const ids = reduce((m,a) => {
-            if(test(/Pattern/, path(['id','type'], a))) {
+            if(path(['id','type'], a) === 'ArrayPattern' ) {
 
                 return concat(m, map(prop('name'), a.id.elements))
 
+            } else if(path(['id','type'], a) === 'ObjectPattern' ) {
+
+                return concat(m, map(path(['key','name']), a.id.properties))
+
             } else {
+
                 return append(path(['id','name'], a), m)
+
             }
 
         }, [], node.declarations || [])

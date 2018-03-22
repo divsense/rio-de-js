@@ -151,7 +151,7 @@ DeclarationStatement
     }
 
 Declaration
-  = id:(Identifier / ArrayDestructive / ObjectDestrctive) __ "=" __ init:(__ SingleExpression)? {
+  = id:(Identifier / ArrayPattern / ObjectPattern) __ "=" __ init:(__ SingleExpression)? {
       return {
         type: "VariableDeclarator",
         id: id,
@@ -571,10 +571,8 @@ FormalParameterList
     = head:FormalParameterArg tail:(__ ',' __ FormalParameterArg)* {
         return buildList(head, tail, 3)
     }
-    /*
-    / ArrayLiteral                            // ECMAScript 6: Parameter Context Matching
-    / ObjectLiteral                           // ECMAScript 6: Parameter Context Matching
-    */
+    / p:ArrayPattern { return [p] }                            // ECMAScript 6: Parameter Context Matching
+    / p:ObjectPattern { return [p] }                           // ECMAScript 6: Parameter Context Matching
 
 FormalParameterArg
     = id:Identifier init:(__ "=" __ SingleExpression)? {
@@ -598,16 +596,32 @@ ArrowFunctionBody
         };
     }
 
-ArrayDestructive
-    = "[" __ head:Identifier tail:(__ ", " __ Identifier)* "]" {
+ArrayPattern
+    = "[" __ head:Identifier tail:(__ "," __ Identifier)* "]" {
       return {
         type: "ArrayPattern",
         elements: buildList(head, tail, 3)
       };
     }
 
-ObjectDestrctive
-    = Identifier
+ObjectPattern
+    = "{" __ head:Identifier tail:(__ "," __ Identifier)* "}" {
+      return {
+        type: "ObjectPattern",
+        properties: buildList(head, tail, 3).map(function(x) {
+            return { 
+                type: "Property",
+                key: x,
+                value: x,
+                kind: "init",
+                method: false,
+                shorthand: true,
+                computed: false
+            };
+        })
+      };
+    }
+
 
 //=============================================================================
 
