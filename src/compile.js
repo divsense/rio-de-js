@@ -1,5 +1,5 @@
 const { generate } = require('astring')
-const { indexOf, set, is, values, prop, concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex, remove, lensPath, view, find, compose, filter, map, has, path, propEq } = require('ramda')
+const { test, indexOf, set, is, values, prop, concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex, remove, lensPath, view, find, compose, filter, map, has, path, propEq } = require('ramda')
 
 const setScope = set(lensProp('scope'))
 const setResult = set(lensProp('result'))
@@ -36,7 +36,19 @@ const findUnresolvedDeclaration = (state, node) => {
         return setScope(state.scope, s)
 
     } else if(node.type === 'VariableDeclaration') {
-        const ids = map(path(['id','name']), node.declarations || [])
+        //const ids = map(path(['id','name']), node.declarations || [])
+
+        const ids = reduce((m,a) => {
+            if(test(/Pattern/, path(['id','type'], a))) {
+
+                return concat(m, map(prop('name'), a.id.elements))
+
+            } else {
+                return append(path(['id','name'], a), m)
+            }
+
+        }, [], node.declarations || [])
+
         const curr = last(state.scope)
         const scope = append(concat(ids, curr), dropLast(1, state.scope))
 

@@ -1,4 +1,3 @@
-// Rio Grammar
 {
     function optionalList(value) {
         return value !== null ? value : [];
@@ -152,7 +151,7 @@ DeclarationStatement
     }
 
 Declaration
-  = id:Identifier __ "=" __ init:(__ SingleExpression)? {
+  = id:(Identifier / ArrayDestructive / ObjectDestrctive) __ "=" __ init:(__ SingleExpression)? {
       return {
         type: "VariableDeclarator",
         id: id,
@@ -598,6 +597,17 @@ ArrowFunctionBody
             isExpression: false
         };
     }
+
+ArrayDestructive
+    = "[" __ head:Identifier tail:(__ ", " __ Identifier)* "]" {
+      return {
+        type: "ArrayPattern",
+        elements: buildList(head, tail, 3)
+      };
+    }
+
+ObjectDestrctive
+    = Identifier
 
 //=============================================================================
 
