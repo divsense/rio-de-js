@@ -1,26 +1,16 @@
-exports.makeLib = function(code, libScope, imports, exports) {
+const R = require('ramda')
 
-    try {
+module.exports = function(code, libScope, imports, exports) {
 
-        const flib = new Function(imports.join(','), code)
+    const flib = new Function(imports.join(','), code)
 
-        const scopeArgs = flatten(map(prop('functions'), libScope))
+    const scopeArgs = R.flatten(R.map(R.prop('functions'), libScope))
 
-        const funcs = flib.apply(null, scopeArgs)
+    const funcs = flib.apply(null, scopeArgs)
 
-        const lib = {
-            names: exports,
-            functions: map(x => funcs[x], exports)
-        }
-
-        return {lib}
-
-    } catch(e) {
-
-        return {
-            error: 'Making lib error:' + e.message,
-            details: !e.location ? '' : 'At line: ' + e.location.start.line + ' column: ' + e.location.start.column
-        }
+    return {
+        names: exports,
+        functions: R.map(x => funcs[x], exports)
     }
 
 }

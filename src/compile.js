@@ -150,6 +150,7 @@ const getExportedIdentifiers = ast => {
 
     const xs = view(lensPath(['argument','properties']), find(propEq('type', 'ReturnStatement'), ast.body))
 
+
     if(xs) {
         return map(path(['key', 'name']), xs)
     } else {

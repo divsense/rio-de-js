@@ -1,8 +1,4 @@
-function delay(x) {
-    return new Promise(function(res) {
-        setTimeout(res, x)
-    });
-}
+const delay = time => x => new Promise(resolve => setTimeout(() => resolve(x), time))
 
 module.exports = {
     names:[ 'delay' ],
