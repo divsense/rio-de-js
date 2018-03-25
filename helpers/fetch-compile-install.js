@@ -38,6 +38,7 @@ const fci = (url, riolibs, fetchers) =>
                     ? Promise.resolve(install(url, ast, riolibs))
                     : Promise.all(missing.map(x => fci(x, riolibs, fetchers)))
                              .then(R.mergeAll)
+                             .then(libs => Promise.resolve(install(url, ast, libs)))
         });
 
 module.exports = fci
