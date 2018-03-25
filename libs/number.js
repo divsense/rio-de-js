@@ -1,11 +1,6 @@
 module.exports = {
-    names: [
-        'parseInt',
-        'parseFloat',
-    ],
+    names: [ 'parseInt', 'parseFloat' ],
     functions: [
-        parseInt,
-        parseFloat
-    ]
+        parseInt, parseFloat ]
 };
 

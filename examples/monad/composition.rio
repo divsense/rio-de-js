@@ -1,0 +1,18 @@
+// Monad composition examples.
+// All functions add 11 to the input and return Maybe
+//  add11_1(20) === Just(31)
+//  add11_2() === Nothing()
+//  add11_3(0) === Just(11)
+
+export add11_1, add11_2, add11_3
+
+import 'file://./mart/divsense/maybe' //divsense/maybe
+
+madd10 = Just . add(10)
+minc = Just . inc
+madd11 = minc <=< madd10
+
+add11_1 = x -> maybe(x) >>= madd10 >>= minc
+add11_2 = x -> maybe(x) >>= madd11
+add11_3 = madd11 <=< maybe
+

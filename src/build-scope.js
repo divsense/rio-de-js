@@ -1,6 +1,6 @@
 const { over, lensProp, reduce, indexOf, remove, append, flatten, prop, compose, filter, map, has, path, propEq } = require('ramda')
 
-const defaultLibs = ['http://divsense.com/ramda']
+const defaultLibs = ['ramda']
 
 // excludeNames :: ([Spec], Lib) -> Lib
 const excludeNames = (specs, lib) => reduce((m,x) => {

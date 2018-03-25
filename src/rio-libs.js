@@ -5,9 +5,9 @@ const number = require('../libs/number.js')
 const promise = require('../libs/promise.js')
 
 module.exports = {
-    'http://divsense.com/ramda': ramda,
-    'http://divsense.com/io': io,
-    'http://divsense.com/math': math,
-    'http://divsense.com/number': number,
-    'http://divsense.com/promise': promise
+    'ramda': ramda,
+    'io': io,
+    'math': math,
+    'number': number,
+    'promise': promise
 }
