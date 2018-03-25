@@ -158,7 +158,7 @@ const getExportedIdentifiers = ast => {
     }
 }
 
-// resolveIdentifiers :: (AST, [String]) -> AST
+// compile :: (AST, [String]) -> AST
 module.exports = function(ast, imports) {
     const code = compose(
         generate,

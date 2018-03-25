@@ -1,6 +1,6 @@
 const fs = require('fs')
 
-// file-fetcher :: String -> String
+// file-fetcher :: String -> Promise(String)
 module.exports = path => {
     const fname = path + '.rio'
 
