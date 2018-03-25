@@ -1,7 +1,7 @@
 {
   "name": "rio-de-js",
   "version": "0.0.1",
-  "description": "Divsense Rio to Javascript Compiler",
+  "description": "Divsense Rio Lib Builder",
   "main": "index.js",
   "scripts": {
     "play": "node play/driver.js",
@@ -23,7 +23,7 @@
     "url": "https://github.com/divsense/rio-de-js/issues"
   },
   "bin": {
-    "rioc": "bin/rioc.js"
+    "rio": "bin/rio.js"
   },
   "homepage": "https://github.com/divsense/rio-de-js#readme",
   "devDependencies": {

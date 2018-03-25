@@ -1,2 +1,2 @@
 # rio-de-js
-Divsense Rio to Javascript Compiler
+Divsense Rio Lib Builder
