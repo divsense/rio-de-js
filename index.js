@@ -5,4 +5,6 @@ exports.compile = require('./src/compile.js')
 exports.makeLib = require('./src/make-lib.js')
 exports.install = require('./src/install.js')
 exports.libFunction = require('./src/lib-function.js')
+exports.fci = require('./helpers/fetch-compile-install.js')
+exports.http-fetcher = require('./helpers/http-fetcher.js')
 

@@ -20,7 +20,7 @@ beforeEach(function() {
             .then(function(x) { Rio = x });
 })
 
-describe('Calc', function() {
+describe.only('Calc', function() {
     it('Summa should return total of inputs', function() {
 
         const func = libFunction(Rio, libUrl, 'summa')
