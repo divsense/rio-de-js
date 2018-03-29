@@ -1,6 +1,5 @@
 const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
-const rio = require('riojs')
 
 const fromFile = require('../helpers/file-fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
