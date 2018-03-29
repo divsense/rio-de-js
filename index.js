@@ -1,10 +1,12 @@
-exports.rioLibs = require('./src/rio-libs.js')
-exports.resolveImports = require('./src/resolve-imports.js')
-exports.buildScope = require('./src/build-scope.js')
-exports.compile = require('./src/compile.js')
-exports.makeLib = require('./src/make-lib.js')
-exports.install = require('./src/install.js')
-exports.libFunction = require('./src/lib-function.js')
-exports.fci = require('./helpers/fetch-compile-install.js')
-exports.httpFetcher = require('./helpers/http-fetcher.js')
+module.exports = {
+    rioLibs : require('./src/rio-libs.js'),
+    resolveImports : require('./src/resolve-imports.js'),
+    buildScope : require('./src/build-scope.js'),
+    compile : require('./src/compile.js'),
+    makeLib : require('./src/make-lib.js'),
+    install : require('./src/install.js'),
+    libFunction : require('./src/lib-function.js'),
+    fci : require('./helpers/fetch-compile-install.js'),
+    httpFetcher : require('./helpers/http-fetcher.js')
+}
 
