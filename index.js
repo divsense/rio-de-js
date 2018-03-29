@@ -1,7 +1,7 @@
 module.exports = {
     rioLibs : require('./src/rio-libs.js'),
-    resolveImports : require('./src/resolve-imports.js'),
     buildScope : require('./src/build-scope.js'),
+    resolveImports : require('./src/resolve-imports.js'),
     compile : require('./src/compile.js'),
     makeLib : require('./src/make-lib.js'),
     install : require('./src/install.js'),

@@ -28,8 +28,8 @@ const fetchCode = function(url, fetchers) {
 }
 
 // fci :: (URL, RioLibs, Fetchers) -> RioLibs
-const fci = (url, riolibs, fetchers) =>
-    fetchCode(url, fetchers)
+const fci = (url, riolibs, fetchers) => {
+    return fetchCode(url, fetchers)
         .then(rioCode => {
             const ast = rio.parse(rioCode)
             const missing = resolveImports(ast, riolibs)
@@ -40,6 +40,7 @@ const fci = (url, riolibs, fetchers) =>
                              .then(R.mergeAll)
                              .then(libs => Promise.resolve(install(url, ast, libs)))
         });
+}
 
 module.exports = fci
 

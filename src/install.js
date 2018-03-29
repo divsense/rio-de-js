@@ -1,5 +1,7 @@
 const R = require('ramda')
-const { buildScope, compile, makeLib } = require('../index.js')
+const buildScope = require('./build-scope.js')
+const compile = require('./compile.js')
+const makeLib = require('./make-lib.js')
 
 // install :: (String, AST, RioLibs) -> RioLibs
 module.exports = function (name, ast, riolibs) {

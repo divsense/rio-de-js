@@ -20,7 +20,7 @@ beforeEach(function() {
             .then(function(x) { Rio = x });
 })
 
-describe.only('Calc', function() {
+describe('Calc', function() {
     it('Summa should return total of inputs', function() {
 
         const func = libFunction(Rio, libUrl, 'summa')
@@ -29,19 +29,19 @@ describe.only('Calc', function() {
 
         const inputs = [{value: 1}, {value: 2}]
 
-        return assert.equal(func(inputs), 3)
+        assert.equal(func(inputs), 3)
 
     });
 
-    it('Radic should return radic of inputs', function() {
+    it('radic should return radic of inputs', function() {
 
         const func = libFunction(Rio, libUrl, 'radic')
 
-        assert(func, 'Radic function not found')
+        assert(func, 'radic function not found')
 
         const inputs = [{value: 4}, {value: 2}]
 
-        return assert.equal(func(inputs), 2)
+        assert.equal(func(inputs), 2)
 
     });
 });
