@@ -28,7 +28,6 @@
   "homepage": "https://github.com/divsense/rio-de-js#readme",
   "devDependencies": {
     "ast-query": "^2.0.0",
-    "astring": "^1.2.0",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "minimist": "^1.2.0",
@@ -38,6 +37,7 @@
   },
   "dependencies": {
     "npm": "^5.8.0",
+    "astring": "^1.2.0",
     "riojs": "0.0.2"
   }
 }
