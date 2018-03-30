@@ -1,6 +1,6 @@
 {
   "name": "rio-de-js",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "description": "Divsense Rio Lib Builder",
   "main": "index.js",
   "scripts": {
