@@ -1,4 +1,4 @@
-// Divsense Calculator Producer
+// Calculator
 
 export divideBy, sub, summa, prod, sinus, cosinus,
        logarithm, radic, percent

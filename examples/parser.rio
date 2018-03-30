@@ -1,0 +1,52 @@
+export Parser, pure, fail
+
+// nullValue :: [a, String] -> Boolean
+nullValue = isNil . head
+
+// overValue :: (a -> b) -> [a, String] -> [b, String]
+overValue = f -> over(lensIndex(0), f)
+
+// eval :: (Parser a, String) -> {a, String}
+eval = (p, state) -> prop('parse', p)(state)
+
+// mapValue :: (a -> b) -> {a, String} -> {b, String}
+mapValue = f -> unless(nullValue, overValue(f))
+
+// chainValue :: (a -> Parser b) -> {b, String} -> {b, String}
+chainValue = f -> unless(nullValue, ([value,state]) -> eval(f(value), state))
+
+// apValue :: Parser a -> {(a -> b), String} -> {b, String}
+apValue = p -> unless(nullValue, ([f, state]) -> overValue(f)(eval(p, state)))
+
+// altValue :: Parser a -> {(a -> b), String} -> {b, String}
+altValue = p -> when(nullValue, ([_, state]) -> eval(p, state))
+
+Parser = parse -> ({
+
+    // parse :: String -> [a, String]
+    parse,
+
+    // run :: String -> a
+    run: head . parse,
+
+    // Functor. map :: (a -> b) -> Parser b
+    map: f -> Parser( mapValue(f) . parse ),
+
+    // Monad. chain :: (a -> Parser b) -> Parser b
+    chain: f -> Parser( chainValue(f) . parse ),
+
+    // Applicative. ap :: Parser (a -> b) -> Parser b
+    ap: p -> Parser( apValue(p) . parse ),
+
+    // Alternative. alt :: Parser a -> Parser a
+    alt: p -> Parser( altValue . parse )
+})
+
+pure = value -> Parser(state -> [value, state])
+fail = () -> Parser(state -> [null, state])
+
+/*many = () -> pure(1)*/
+/*some = () -> pure(1)*/
+
+
+

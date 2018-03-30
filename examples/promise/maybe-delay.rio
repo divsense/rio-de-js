@@ -1,0 +1,26 @@
+// Delay Example
+
+export total1, total2
+
+import 'promise' { resolve }
+import 'io' { delay }
+import 'https://gist.githubusercontent.com/divsense/87be40a66c6621a8eed33cb993970dfc/raw/13d3d546dab8de02abd0c3f8195b38e39fb49958/maybe.rio'
+
+maxDelay = 1500
+
+//maybeInputs :: [Any] -> Maybe([Number])
+maybeInputs = map(
+
+
+// limit :: Number -> Number
+limit = ifElse(lt(maxDelay), always(maxDelay), identity)
+
+// calc :: [{value::Number}] -> Number
+calc = limit . sum . map(prop('value'))
+
+// total1 :: [{value::Number}] -> Promise(Number)
+total1 = inputs -> resolve(calc(inputs)) >>> delay
+
+// total2 :: [{value::Number}] -> Promise(Number)
+total2 = delay <<> resolve . calc
+

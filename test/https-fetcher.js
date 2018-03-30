@@ -1,7 +1,8 @@
 const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
+const rio = require('riojs')
 
-const fromFile = require('../helpers/file-fetcher.js')
+const fromHttps = require('../helpers/node-https-fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../index.js')
 
@@ -9,20 +10,23 @@ chai.use(chaiAsPromised)
 const assert = chai.assert
 
 const fetchers = {
-    file: fromFile
+    https: fromHttps
 }
 
-const libUrl = 'file://./examples/promise/delay'
+const libUrl = 'https://gist.githubusercontent.com/divsense/a064e8d5593fc4ed65bd22e0749faad1/raw/598f357f1256c2f3981255aaf7173bdb65c95756/promise-delay.rio'
 
-describe('Promise example', function() {
+describe.skip('Promise example', function() {
+
     var Rio = rioLibs;
 
     before(function() {
         return fci(libUrl, Rio, fetchers)
-            .then(function(x) { Rio = x });
+                .then(function(x) { Rio = x });
     })
 
     it('"total1" should return promise', function() {
+
+        this.timeout(10000);
 
         const total1 = libFunction(Rio, libUrl, 'total1')
 
@@ -35,6 +39,8 @@ describe('Promise example', function() {
     });
 
     it('"total2" should return promise', function() {
+
+        this.timeout(10000);
 
         const total2 = libFunction(Rio, libUrl, 'total2')
 

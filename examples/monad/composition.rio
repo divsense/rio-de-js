@@ -6,7 +6,7 @@
 
 export add11_1, add11_2, add11_3
 
-import 'file://./mart/divsense/maybe' //divsense/maybe
+import 'file://./examples/maybe'
 
 madd10 = Just . add(10)
 minc = Just . inc

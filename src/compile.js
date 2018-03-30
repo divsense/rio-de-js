@@ -1,5 +1,5 @@
 const { generate } = require('astring')
-const { test, indexOf, set, is, values, prop, concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex, remove, lensPath, view, find, compose, filter, map, has, path, propEq } = require('ramda')
+const { difference, keys, isEmpty, assoc, test, indexOf, set, is, values, prop, concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex, remove, lensPath, view, find, compose, filter, map, has, path, propEq } = require('ramda')
 
 const setScope = set(lensProp('scope'))
 const setResult = set(lensProp('result'))
@@ -41,82 +41,132 @@ const functionParam = (m, p) => {
 
 }
 
-// findUnresolvedDeclaration :: (State, Node) -> State
-const findUnresolvedDeclaration = (state, node) => {
-    if(state.result) {
+// updateLastScope :: ([String], State) -> Scope
+const updateLastScope = (ids, state) => {
+    const curr = last(state.scope)
+    return append(concat(ids, curr), dropLast(1, state.scope))
+}
+
+const addSymbols = ids => over(lensProp('symbols'), concat(ids))
+
+// buildScopeHierarchy :: (State, Node) -> State
+const buildScopeHierarchy = (state, node) => {
+
+    if(!node) {
         return state
     }
 
-    if(node.type === 'ArrowFunctionExpression') {
-        const _state = over(lensProp('scope'), append(reduce(functionParam, [], node.params)), state)
+    if(node.type === 'FunctionDeclaration') {
 
-        const s = (node.body.type === 'BlockStatement')
-                    ? reduce(findUnresolvedDeclaration, _state, node.body.body)
-                    : findUnresolvedDeclaration(_state, node.body)
+        // create new inner state
+        const instate = {
+            symbols: reduce(functionParam, [], node.params),
+            use:{},
+            scopes:[]
+        }
+
+        const _instate = reduce(buildScopeHierarchy, instate, node.body.body)
+
+        // update upper scope symbols
+        const _state = addSymbols([node.id.name])( state )
+
+        return over(lensProp('scopes'), append(_instate), _state)
+
+    } else if(node.type === 'ArrowFunctionExpression') {
+
+        const instate = {
+            symbols: reduce(functionParam, [], node.params),
+            use:{},
+            scopes:[]
+        }
+
+        const _instate = (node.body.type === 'BlockStatement')
+                    ? reduce(buildScopeHierarchy, instate, node.body.body)
+                    : buildScopeHierarchy(instate, node.body)
 
 
-        return setScope(state.scope, s)
+        return over(lensProp('scopes'), append(_instate), state)
 
     } else if(node.type === 'VariableDeclaration') {
         const ids = reduce((m,a) => {
             if(path(['id','type'], a) === 'ArrayPattern' ) {
-
                 return concat(m, map(prop('name'), a.id.elements))
-
             } else if(path(['id','type'], a) === 'ObjectPattern' ) {
-
                 return concat(m, map(path(['key','name']), a.id.properties))
-
             } else {
-
                 return append(path(['id','name'], a), m)
-
             }
-
         }, [], node.declarations || [])
-
-        const curr = last(state.scope)
-
-        const scope = append(concat(ids, curr), dropLast(1, state.scope))
 
         const inits = mapInit(node.declarations)
 
-        return reduce(findUnresolvedDeclaration, setScope(scope, state), inits)
+        const _state = addSymbols(ids)( state )
+
+        return reduce(buildScopeHierarchy, _state, inits)
 
     } else if(node.type === 'MemberExpression') {
 
-        return reduce(findUnresolvedDeclaration, state, [node.object])
+        return reduce(buildScopeHierarchy, state, [node.object])
 
-    } else if(node.type === 'ObjectExpression') {
+    } else if(node.type === 'ObjectExpression' || node.type === 'ObjectPattern') {
 
-        return reduce(findUnresolvedDeclaration, state, map(prop('value'), node.properties))
+        return reduce(buildScopeHierarchy, state, map(prop('value'), node.properties))
 
     } else if(node.type === 'Identifier') {
 
-        return setResult(verifyId(state.scope, node.name), state)
+        return over(lensProp('use'), assoc(node.name, node.loc), state)
 
     } else if(Array.isArray(node)) {
 
-        return reduce(findUnresolvedDeclaration, state, node)
+        return reduce(buildScopeHierarchy, state, node)
 
     } else if(is(Object, node)) {
 
-        return reduce(findUnresolvedDeclaration, state, values(node))
+        return reduce(buildScopeHierarchy, state, values(node))
 
     } 
 
     return state
 }
 
+// findUnresolved :: [Identifier] -> ({Identifier:Location}, Scope) -> {Identifier:Location}
+const findUnresolved = symbols => (m, instate) => {
+    if( isEmpty(m) ) {
+
+        const _symbols = concat(instate.symbols, symbols)
+
+        if( !isEmpty(instate.use) ) {
+            const x = difference(keys(instate.use), _symbols)
+            if(!isEmpty(x)) {
+                return {
+                    name: x[0],
+                    loc: instate.use[x[0]]
+                }
+            }
+        }
+
+        if( !isEmpty(instate.scopes) ) {
+            return reduce(findUnresolved(_symbols), m, instate.scopes)
+        }
+    }
+
+    return m
+}
+
 // resolveIdentifiers :: [String] -> AST -> AST
-const resolveIdentifiers = scopeNames => ast => {
+const resolveIdentifiers = imports => ast => {
 
-    const state = { scope: [scopeNames], result: null }
+    const state = reduce(buildScopeHierarchy, {symbols: imports, use:{}, scopes:[]}, ast.body)
 
-    const unresolved = reduce(findUnresolvedDeclaration, state, ast.body)
+    const unresolved = reduce(findUnresolved(state.symbols), {}, [state])
 
-    if( unresolved.result !== null ) {
-        throw({message: 'Unresolved symbol: ' + unresolved.result})
+    if( !isEmpty(unresolved) ) {
+        throw({
+            message: 'Unknown symbol: ' 
+                        + unresolved.name
+                        + ' (line: ' + unresolved.loc.start.line
+                        + ', column: ' + unresolved.loc.start.column + ')'
+        })
     }
 
     return ast
@@ -149,7 +199,6 @@ const relocateExports = ast => {
 const getExportedIdentifiers = ast => {
 
     const xs = view(lensPath(['argument','properties']), find(propEq('type', 'ReturnStatement'), ast.body))
-
 
     if(xs) {
         return map(path(['key', 'name']), xs)

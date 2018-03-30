@@ -11,16 +11,16 @@ const fetchers = {
     file: fromFile
 }
 
-const libUrl = 'file://./mart/divsense/calc'
-
-var Rio = rioLibs;
-
-beforeEach(function() {
-    return fci(libUrl, Rio, fetchers)
-            .then(function(x) { Rio = x });
-})
+const libUrl = 'file://./examples/calc'
 
 describe('Calc', function() {
+
+    var Rio = rioLibs;
+
+    before(function() {
+        return fci(libUrl, Rio, fetchers).then(function(x) { Rio = x });
+    })
+
     it('Summa should return total of inputs', function() {
 
         const func = libFunction(Rio, libUrl, 'summa')

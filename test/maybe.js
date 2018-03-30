@@ -11,15 +11,16 @@ const fetchers = {
     file: fromFile
 }
 
-const libUrl = 'file://./mart/divsense/maybe'
-
-var Rio = rioLibs;
-
-beforeEach(function() {
-    return fci(libUrl, Rio, fetchers).then(function(x) { Rio = x });
-})
+const libUrl = 'file://./examples/maybe'
 
 describe('Maybe', function() {
+
+    var Rio = rioLibs;
+
+    before(function() {
+        return fci(libUrl, Rio, fetchers).then(function(x) { Rio = x });
+    })
+
     it('Just should return Object with property "value"', function() {
         const Just = libFunction(Rio, libUrl, 'Just')
         assert(Just, 'Just function not found')

@@ -13,13 +13,14 @@ const fetchers = {
 
 const libUrl = 'file://./examples/monad/composition'
 
-var Rio = rioLibs;
-
-beforeEach(function() {
-    return fci(libUrl, Rio, fetchers).then(function(x) { Rio = x });
-})
-
 describe('Monad Composition', function() {
+
+    var Rio = rioLibs;
+
+    before(function() {
+        return fci(libUrl, Rio, fetchers).then(function(x) { Rio = x });
+    })
+
     it('add11 should return Maybe instance', function() {
         const add11_1 = libFunction(Rio, libUrl, 'add11_1')
         const add11_2 = libFunction(Rio, libUrl, 'add11_2')
