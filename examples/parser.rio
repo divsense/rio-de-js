@@ -1,4 +1,6 @@
-export Parser, parse, pure, fail, item, sat, char, string, some, many, digit, letter, re, space
+export Parser, parse, pure, fail, item, sat,
+       char, string, some, many, digit, letter,
+       re, space, token
 
 // overValue :: (a -> b) -> [a, String] -> [b, String]
 overValue = f -> over(lensIndex(0), f)
@@ -58,7 +60,7 @@ sat = f -> item() >>= x -> f(x) ? pure(x) : fail()
 char = x -> sat(equals(x))
 
 // string :: String -> Parser String
-string = ifElse(isEmpty, pure, xs -> char(head(xs)) >>* string(tail(xs)) >>* pure(xs))
+string = ifElse(isEmpty, pure, xs -> char(head(xs)) >> string(tail(xs)) >> pure(xs))
 
 // re :: Char -> Parser Char
 re = x -> sat(test(x))
@@ -70,7 +72,7 @@ digit = re(/[0-9]/)
 letter = re(/[a-zA-Z]/)
 
 // space :: Parser ''
-space = many(re(/\s/)) >>* pure('')
+space = many(re(/\s/)) >> pure('')
 
 // many :: Parser Char -> Parser String
 many = p -> some(p) <|> pure('')
@@ -80,5 +82,9 @@ someValue = p -> unless(isNil, ([x, inp]) -> (consValue(x) . run(inp) . many)( p
 
 // some :: Parser Char -> Parser String
 some = p -> Parser( someValue(p) . parse(p) )
+
+// token :: Parser a -> Parser a
+token = p -> space >> p >>= x -> space >> pure(x)
+
 
 

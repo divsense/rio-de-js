@@ -142,5 +142,22 @@ describe.only('Parser', function() {
 
 
     });
+
+    it('should implement string function', function() {
+
+        const string = libFunction(Rio, libUrl, 'string');
+        const token = libFunction(Rio, libUrl, 'token');
+
+        assert(token, '"token" function not found')
+
+        const a = token(string('foo'))
+
+        const a_result = a.parse('   foo bar')
+
+        assert.equal(a_result[0], 'foo')
+        assert.equal(a_result[1], 'bar')
+
+    });
+
 });
 
