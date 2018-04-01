@@ -95,7 +95,12 @@ module.exports = {
         "invert",
         "invertObj",
         "invoker",
-        "is",
+
+        "isObject",
+        "isNumber",
+        "isString",
+        "isArray",
+
         "isEmpty",
         "isNil",
         "join",
@@ -338,7 +343,12 @@ module.exports = {
         R.invert,
         R.invertObj,
         R.invoker,
-        R.is,
+
+        R.is(Object),
+        R.is(Number),
+        R.is(String),
+        R.is(Array),
+
         R.isEmpty,
         R.isNil,
         R.join,
