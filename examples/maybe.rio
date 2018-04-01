@@ -1,4 +1,5 @@
-// Maybe
+// Maybe Monad
+
 export Just, Nothing, isJust, isNothing, getOrElse, maybe
 
 isJust = has('value')
@@ -11,13 +12,13 @@ Just = value -> ({
     // semigroup
     concat: m -> isNothing(m) ? value : (Just . concat(value) . prop('value'))(m),
 
-    // functor n. map :: (a -> b) -> Maybe(b)
+    // functor
     map: f -> (Just . f)(value),
 
     // applicative
-    ap: m -> map(value, m),
+    ap: fm -> map(value, fm()),
 
-    // monad m. chain :: (a -> Maybe(b)) -> Maybe(b)
+    // monad
     chain: f -> f(value)
 
 })
