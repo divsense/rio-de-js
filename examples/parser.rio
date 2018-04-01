@@ -1,6 +1,6 @@
 export Parser, eval, pure, fail, item, sat,
        char, string, some, many, digit, letter,
-       re, space, token, noneof
+       re, space, token, noneof, rest
 
 // eval :: (Parser a, String) -> [a, String]
 eval = (p, inp) -> parse(p)(inp)
@@ -10,6 +10,9 @@ pure = x -> Parser(inp -> [x, inp])
 
 // fail :: () -> Parser null
 fail = () -> Parser(_ -> null)
+
+// rest :: Parser a -> Parser a
+rest = Parser(inp -> [inp, ''])
 
 // many :: Parser a -> Parser [a]
 many = p -> some(p) <|> pure([])
@@ -88,4 +91,5 @@ apValue = fp -> unless(isNil, ([f, inp]) -> (applyFn(f) . parse(fp()))( inp ))
 
 // altValue :: Parser a -> [(a -> b), String] -> [b, String]
 altValue = (fp, inp) -> when(isNil, _ -> eval(fp(), inp))
+
 
