@@ -5,6 +5,8 @@ const R = require('ramda')
 const rio = require('riojs')
 const { install, rioLibs, resolveImports } = require('../index.js')
 
+const loc = x => ' (line: ' + x.start.line + ', column: ' + x.start.column + ')'
+
 // fetchCode :: (URL, {protocol:Function}) -> Promise(String)
 const fetchCode = function(url, fetchers) {
 
@@ -19,10 +21,10 @@ const fetchCode = function(url, fetchers) {
         if(fetchers[protocol]) {
             return fetchers[protocol](name)
         } else {
-            return Promise.reject(Error('Lib name: ' + protocol + ' protocol is not supported'))
+            return Promise.reject({message:'Lib name: ' + protocol + ' protocol is not supported'})
         }
     } else {
-        return Promise.reject(Error('Invalid url: ' + url))
+        return Promise.reject({message:'Invalid url: ' + url})
     }
 
 }
@@ -39,7 +41,11 @@ const fci = (url, riolibs, fetchers) => {
                     : Promise.all(missing.map(x => fci(x, riolibs, fetchers)))
                              .then(R.mergeAll)
                              .then(libs => Promise.resolve(install(url, ast, libs)))
-        });
+        })
+        .catch(e => {
+            const message = (e.message || e.Error || e) + (e.location ? loc(e.location) : '')
+            return Promise.reject({message})
+        })
 }
 
 module.exports = fci
