@@ -1,0 +1,46 @@
+export xmld
+
+import 'io'
+import 'file://./examples/parser'
+
+tagStart = '.'
+attrStart = '@'
+passStart = '~'
+blockStart = '!'
+
+ident = some(re(/[a-zA-Z0-9:-]/)) >>= pure . join('')
+
+quotStr = c -> char(c) >> some(noneof(c)) >>= x -> char(c) >> pure(x)
+
+singleQuotStr = quotStr("'")
+doubleQuotStr = quotStr('"')
+
+attrValue = (singleQuotStr <|> doubleQuotStr) >>= pure . join('')
+
+keyOnly = ident >>= key -> pure({key, value:true})
+keyValue = ident >>= key -> char("=") >> attrValue >>= value -> pure({key, value})
+
+attr = space >> (keyValue <|> keyOnly)
+
+attribute = char(attrStart) >> ident >>= key -> pure([
+        {key: 'punctuation', value: attrStart},
+        {key:'attr-name', value: key}
+        ])
+
+elem = char(tagStart) >> ident >>= id -> pure([
+        {key: 'punctuation', value: tagStart},
+        {key:'tag', value: id}
+        ])
+
+elemWithAttrs = elem >>= t -> some(attr) >>= xs -> pure(t ++ xs)
+
+special = s -> char(s) >> rest >>= x -> pure([
+                        {key:'selector', value: s},
+                        {key:'italic token-comment', value: x}
+                        ])
+
+pass = special(passStart)
+block = special(blockStart)
+
+xmld = elemWithAttrs <|> elem <|> attribute <|> pass <|> block
+

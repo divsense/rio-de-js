@@ -3,7 +3,7 @@ const rio = require('riojs')
 
 const fromHttps = require('../helpers/node-https-fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
-const { rioLibs, libFunction } = require('../index.js')
+const { rioLibs, libFunction } = require('../rio.de.js')
 
 const assert = chai.assert
 

@@ -1,4 +1,4 @@
-// nodeHttpsFetcher :: String -> Promise(String)
+// httpsFetcher :: String -> Promise(String)
 module.exports = function(url) {
 
     return new Promise((resolve, reject) => {

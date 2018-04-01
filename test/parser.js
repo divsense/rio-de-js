@@ -4,7 +4,7 @@ const R = require('ramda')
 
 const fromFile = require('../helpers/file-fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
-const { rioLibs, libFunction } = require('../index.js')
+const { rioLibs, libFunction } = require('../rio.de.js')
 
 const assert = chai.assert
 
@@ -14,10 +14,10 @@ const fetchers = {
 
 const libUrl = 'file://./examples/parser'
 
-describe.only('Parser', function() {
+describe('Parser', function() {
 
     var Rio = rioLibs;
-    var Parser, pure, fail, parse;
+    var Parser, pure, fail, eval;
 
     before(function() {
         return fci(libUrl, Rio, fetchers).then(function(x) {
@@ -25,11 +25,11 @@ describe.only('Parser', function() {
             Parser = libFunction(Rio, libUrl, 'Parser');
             pure = libFunction(Rio, libUrl, 'pure');
             fail = libFunction(Rio, libUrl, 'fail');
-            parse = libFunction(Rio, libUrl, 'parse');
+            eval = libFunction(Rio, libUrl, 'eval');
             assert(Parser, 'Parser function not found');
             assert(pure, '"pure" function not found');
             assert(fail, '"fail" function not found');
-            assert(parse, '"parse" function not found');
+            assert(eval, '"eval" function not found');
         });
     })
 
@@ -39,7 +39,7 @@ describe.only('Parser', function() {
 
         const y = x.map(a => 'c' + a)
 
-        const result = y.parse()
+        const result = eval(y, '')
 
         assert.equal(result[0], 'ca')
 
@@ -51,9 +51,9 @@ describe.only('Parser', function() {
         const y = pure('a')
         const z = pure('b')
 
-        const r = x.ap(y).ap(z)
+        const r = x.ap(() => y).ap(() => z)
 
-        const result = r.parse()
+        const result = eval(r, '')
 
         assert.equal(result[0], 'dab')
 
@@ -64,7 +64,7 @@ describe.only('Parser', function() {
         const x = fail()
         const y = pure('b')
 
-        const r = x.alt(y)
+        const r = x.alt(() => y)
 
         const result = r.parse()
 
@@ -77,11 +77,11 @@ describe.only('Parser', function() {
         const item = libFunction(Rio, libUrl, 'item');
         assert(item, '"item" function not found')
 
-        const result = item().parse('abc')
+        const result = eval(item(), 'abc')
         assert.equal(result[0], 'a')
 
-        const empty = item().parse('')
-        assert.equal(empty[0], [])
+        const empty = eval(item(), '')
+        assert.equal(empty, null)
 
     });
 
@@ -123,7 +123,9 @@ describe.only('Parser', function() {
 
         const y = some(digit).parse('123doom')
 
-        assert.equal( y[0], '123')
+        assert.equal( y[0][0], '1')
+        assert.equal( y[0][1], '2')
+        assert.equal( y[0][2], '3')
         assert.equal( y[1], 'doom')
 
         const z = some(digit).parse('doom')

@@ -3,7 +3,10 @@
 //
 const R = require('ramda')
 const rio = require('riojs')
-const { install, rioLibs, resolveImports } = require('../index.js')
+//const { install, rioLibs, resolveImports } = require('../index.js')
+const install = require('../src/install.js')
+const rioLibs = require('../src/rio-libs.js')
+const resolveImports = require('../src/resolve-imports.js')
 
 const loc = x => ' (line: ' + x.start.line + ', column: ' + x.start.column + ')'
 
