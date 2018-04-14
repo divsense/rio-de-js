@@ -3,7 +3,6 @@
 //
 const R = require('ramda')
 const rio = require('riojs')
-//const { install, rioLibs, resolveImports } = require('../index.js')
 const install = require('../src/install.js')
 const rioLibs = require('../src/rio-libs.js')
 const resolveImports = require('../src/resolve-imports.js')
@@ -32,16 +31,19 @@ const fetchCode = function(url, fetchers) {
 
 }
 
-// fci :: (URL, RioLibs, Fetchers) -> RioLibs
-const fci = (url, riolibs, fetchers) => {
-    return fetchCode(url, fetchers)
+// fci :: (URL, RioLibs, Fetchers, {String:String}) -> RioLibs
+const fci = (url, riolibs, fetchers, endpoints) => {
+    const uparts = R.split('::', url)
+    const _url = (endpoints && uparts[0] && endpoints[uparts[0]]) ? (endpoints[uparts[0]] + uparts[1]) : url
+
+    return fetchCode(_url, fetchers)
         .then(rioCode => {
             const ast = rio.parse(rioCode)
             const missing = resolveImports(ast, riolibs)
 
             return missing.length === 0
                     ? Promise.resolve(install(url, ast, riolibs))
-                    : Promise.all(missing.map(x => fci(x, riolibs, fetchers)))
+                    : Promise.all(missing.map(x => fci(x, riolibs, fetchers, endpoints)))
                              .then(R.mergeAll)
                              .then(libs => Promise.resolve(install(url, ast, libs)))
         })
