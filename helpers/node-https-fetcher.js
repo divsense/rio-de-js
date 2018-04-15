@@ -4,7 +4,10 @@ const { URL } = require('url')
 // nodeHttpsFetcher :: String -> Promise(String)
 module.exports = u => {
 
-    const url = new URL('https://' + u)
+    const ext = u.split('.').pop()
+    const _url = (ext === 'rio') ? u : u + '.rio'
+
+    const url = new URL('https://' + _url)
 
     const options = {
         hostname: url.hostname,

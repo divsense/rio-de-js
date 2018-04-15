@@ -13,9 +13,9 @@ const fetchers = {
     https: fromHttps
 }
 
-const libUrl = 'https://gist.githubusercontent.com/divsense/a064e8d5593fc4ed65bd22e0749faad1/raw/598f357f1256c2f3981255aaf7173bdb65c95756/promise-delay.rio'
+const libUrl = 'https://gist.githubusercontent.com/divsense/a064e8d5593fc4ed65bd22e0749faad1/raw/598f357f1256c2f3981255aaf7173bdb65c95756/promise-delay'
 
-describe.skip('Promise example', function() {
+describe('Promise example', function() {
 
     var Rio = rioLibs;
 
