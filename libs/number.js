@@ -1,5 +1,5 @@
 module.exports = {
-    names: [ 'parseInt', 'parseFloat', 'toNumber' ],
-    functions: [ parseInt, parseFloat, Number ]
+    names: [ 'parseInt', 'parseFloat', 'toNumber', 'isNaN' ],
+    functions: [ parseInt, parseFloat, Number, isNaN ]
 };
 
