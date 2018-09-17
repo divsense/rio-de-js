@@ -1,24 +1,20 @@
 const chai = require('chai')
 const rio = require('riojs')
 
-const fromFile = require('../helpers/file-fetcher.js')
+const fetch = require('./fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../rio.de.js')
 
 const assert = chai.assert
 
-const fetchers = {
-    file: fromFile
-}
-
-const libUrl = 'file://./examples/monad/composition'
+const libUrl = 'file://./examples/monad/composition.rio'
 
 describe('Monad Composition', function() {
 
     var Rio = rioLibs;
 
     before(function() {
-        return fci(libUrl, Rio, fetchers).then(function(x) { Rio = x });
+        return fci(libUrl, Rio, fetch).then(function(x) { Rio = x });
     })
 
     it('add11 should return Maybe instance', function() {

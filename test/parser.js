@@ -2,17 +2,13 @@ const chai = require('chai')
 const rio = require('riojs')
 const R = require('ramda')
 
-const fromFile = require('../helpers/file-fetcher.js')
+const fetch = require('./fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../rio.de.js')
 
 const assert = chai.assert
 
-const fetchers = {
-    file: fromFile
-}
-
-const libUrl = 'file://./examples/parser'
+const libUrl = 'file://./examples/parser.rio'
 
 describe('Parser', function() {
 
@@ -20,7 +16,7 @@ describe('Parser', function() {
     var Parser, pure, fail, eval;
 
     before(function() {
-        return fci(libUrl, Rio, fetchers).then(function(x) {
+        return fci(libUrl, Rio, fetch).then(function(x) {
             Rio = x;
             Parser = libFunction(Rio, libUrl, 'Parser');
             pure = libFunction(Rio, libUrl, 'pure');

@@ -1,7 +1,7 @@
 export xmld
 
 import 'io'
-import 'file://./examples/parser'
+import 'file://./examples/parser.rio'
 
 tagStart = '.'
 attrStart = '@'

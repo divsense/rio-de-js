@@ -6,7 +6,6 @@ module.exports = {
     makeLib : require('./src/make-lib.js'),
     install : require('./src/install.js'),
     libFunction : require('./src/lib-function.js'),
-    fci : require('./helpers/fetch-compile-install.js'),
-    httpFetcher : require('./helpers/http-fetcher.js')
+    fci : require('./helpers/fetch-compile-install.js')
 }
 
