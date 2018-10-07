@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 const fs = require('fs')
 const most = require('most')
 const R = require('ramda')
