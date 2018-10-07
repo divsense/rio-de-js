@@ -4,6 +4,7 @@
 const R = require('ramda')
 const { generate } = require('astring')
 const ramdaLib = require('../libs/ramda.js')
+const unresolvedIdentifiers = require('../src/unresolved-identifiers.js')
 
 // removeImportDeclarations :: AST -> AST
 const removeImportDeclarations = R.over(R.lensProp('body'), R.filter(x => x.type !== 'ImportDeclaration'))
@@ -29,7 +30,6 @@ const standardImports = () => {
 
 // getImports :: AST -> [String]
 const getImports = R.compose(
-            R.concat(standardImports()),
             R.map(x => {
                 const source = R.path(['source','value'], x)
 
@@ -64,6 +64,13 @@ const msm = ast => {
         removeImportDeclarations,
         removeExportDeclarations
     )( ast )
+
+    const symbols = R.prop('symbols', identifiers([])(ast))
+
+    const ramdaSymbols = R.intersection(symbols, ramdaLib.names)
+
+
+    console.log('IDEN', symbols, ramdaSymbols)
 
     const CR = R.join('\n')
     const SC = R.join(';')
