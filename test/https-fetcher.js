@@ -9,9 +9,9 @@ const { rioLibs, libFunction } = require('../rio.de.js')
 chai.use(chaiAsPromised)
 const assert = chai.assert
 
-const libUrl = 'https://gist.githubusercontent.com/divsense/a064e8d5593fc4ed65bd22e0749faad1/raw/598f357f1256c2f3981255aaf7173bdb65c95756/promise-delay'
+const libUrl = 'https://gist.githubusercontent.com/divsense/a064e8d5593fc4ed65bd22e0749faad1/raw/598f357f1256c2f3981255aaf7173bdb65c95756/promise-delay.rio'
 
-describe('Promise example', function() {
+describe('Https fetcher', function() {
 
     var Rio = rioLibs;
 

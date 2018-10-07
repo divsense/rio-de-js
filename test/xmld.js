@@ -11,7 +11,7 @@ const assert = chai.assert
 const libUrl = 'mart::parsers/xmld.rio'
 const endpoint = 'file://./examples/'
 
-describe.only('Xmld', function() {
+describe('Xmld', function() {
 
     var Rio = rioLibs;
     var xmld;

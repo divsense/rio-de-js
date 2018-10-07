@@ -4,7 +4,7 @@ const a = Promise.all.bind(Promise)
 const c = Promise.race.bind(Promise)
 
 module.exports = {
-    names:[ 'resolve', 'reject', 'all', 'race' ],
+    names:[ 'promiseResolve', 'promiseReject', 'promiseAll', 'promiseRace' ],
     functions:[ r, j, a, c ]
 };
 

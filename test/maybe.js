@@ -9,7 +9,7 @@ const assert = chai.assert
 
 const libUrl = 'file://./examples/maybe.rio'
 
-describe.only('Maybe', function() {
+describe('Maybe', function() {
 
     var Rio = rioLibs;
 

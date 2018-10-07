@@ -1,5 +1,8 @@
 const { generate } = require('astring')
-const { difference, keys, isEmpty, assoc, test, indexOf, set, is, values, prop, concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex, remove, lensPath, view, find, compose, filter, map, has, path, propEq } = require('ramda')
+const { difference, keys, isEmpty, assoc, test, indexOf, set, is, values, prop
+        , concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex
+        , remove, lensPath, view, find, compose, filter, map, has
+        , path, propEq, unless, isNil } = require('ramda')
 
 const setScope = set(lensProp('scope'))
 const setResult = set(lensProp('result'))

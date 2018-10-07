@@ -2,7 +2,7 @@ const fs = require('fs')
 const most = require('most')
 const R = require('ramda')
 const rio = require('riojs')
-const { libFunction, buildScope, compile, install, rioLibs, resolveImports } = require('../index.js')
+const { libFunction, buildScope, msm, install, rioLibs, resolveImports } = require('../index.js')
 
 const argv = require('minimist')(process.argv.slice(2))
 
@@ -30,11 +30,10 @@ const url = 'file://' + _url
 const fromFile = function(name) {
     const fname = name + '.rio'
 
-    console.log('Fetching ' + fname + '...')
-
     return new Promise((resolve, reject) => {
         fs.readFile(fname, {encoding: 'utf8'}, (err, str) => {
             if(err) {
+                console.og('!!!')
                 reject(err);
             } else {
                 resolve(str);
@@ -143,6 +142,14 @@ const makelib = function(url, riolibs) {
             });
 }
 
+const staticLib = function(url) {
+    return most.fromPromise( fetchCode(url, fetchers) )
+               .map(rioCode => {
+                const ast = rio.parse(rioCode)
+                return msm(ast)
+               })
+}
+
 const showError = function(err) {
     console.log('ERROR.', (err.message || err))
     return most.of({})
@@ -162,6 +169,15 @@ switch(cmd) {
                    console.log(e)
                })
 
+
+        break;
+
+    case 'static':
+        staticLib(url)
+            .recoverWith(showError)
+            .observe(code => {
+                console.log(code)
+            })
 
         break;
 
