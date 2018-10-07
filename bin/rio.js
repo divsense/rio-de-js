@@ -15,6 +15,7 @@ if(!argv._.length || argv.help){
     console.log('  <path> : path to rio file without .rio extension')
     console.log('  [name] : name of function to execute')
     console.log('  [-p]   : function returns Promise')
+    console.log('  [-o]   : output path')
     return
 }
 
@@ -181,7 +182,11 @@ switch(cmd) {
                     console.error('Unresolved identifiers', res.unresolved)
                     process.exit(1)
                 } else {
-                    console.log(res.code)
+                    if(argv.o) {
+                        fs.writeFileSync(argv.o, res.code, {encoding: 'utf8'})
+                    } else {
+                        console.log(res.code)
+                    }
                 }
             })
                .catch(function(e) {
