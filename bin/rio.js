@@ -175,8 +175,13 @@ switch(cmd) {
     case 'static':
         staticLib(url)
             .recoverWith(showError)
-            .observe(code => {
-                console.log(code)
+            .observe(res => {
+                if(res.unresolved.length) {
+                    console.error('Unresolved identifiers', res.unresolved)
+                    process.exit(1)
+                } else {
+                    console.log(res.code)
+                }
             })
 
         break;

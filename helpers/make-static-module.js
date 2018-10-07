@@ -4,6 +4,8 @@
 const R = require('ramda')
 const { generate } = require('astring')
 const ramdaLib = require('../libs/ramda.js')
+const promiseLib = require('../libs/promise.js')
+const resolvedImports = require('../src/imported-symbols.js')
 const unresolvedIdentifiers = require('../src/unresolved-identifiers.js')
 
 // removeImportDeclarations :: AST -> AST
@@ -19,14 +21,6 @@ const getExports = R.compose(
         R.find(R.propEq('type', 'ReturnStatement')),
         R.prop('body')
 )
-
-// standardImports :: () -> [String]
-const standardImports = () => {
-    const r = {source: 'ramda', names: ramdaLib.names}
-
-    return [r]
-
-}
 
 // getImports :: AST -> [String]
 const getImports = R.compose(
@@ -65,17 +59,24 @@ const msm = ast => {
         removeExportDeclarations
     )( ast )
 
-    const symbols = R.prop('symbols', identifiers([])(ast))
+    const imp = resolvedImports(ast)
 
-    const ramdaSymbols = R.intersection(symbols, ramdaLib.names)
+    const symbols = unresolvedIdentifiers(imp, ast)
+    const names = R.map(R.prop('name'), symbols)
+
+    const ramdaNames = R.intersection(names, ramdaLib.names)
+    const promiseNames = R.intersection(names, ramdaLib.names)
 
 
-    console.log('IDEN', symbols, ramdaSymbols)
+    const unresolved = R.map(name => R.find(R.propEq('name', name), symbols), R.difference(names, ramdaNames))
+    const ramdaSource = ramdaNames.length ? [{source: 'ramda', names: ramdaNames}] : []
 
     const CR = R.join('\n')
     const SC = R.join(';')
 
-    const imports = R.map(x => 'const {' + R.join(',', x.names) + '} = require(' + x.source + ')', getImports(ast))
+    const allImports = R.concat(ramdaSource, getImports(ast))
+
+    const imports = R.map(x => 'const {' + R.join(',', x.names) + '} = require(\'' + x.source + '\')', allImports)
     const exports = R.map(x => 'exports.' + x + '=' + x, getExports(ast))
 
     const promises = [
@@ -85,7 +86,7 @@ const msm = ast => {
         'const promiseRace = Promise.race.bind(Promise)'
     ]
 
-    return CR([SC(promises), CR(imports), body, CR(exports)])
+    return {code: CR([SC(promises), CR(imports), body, CR(exports)]), unresolved}
 
 }
 
