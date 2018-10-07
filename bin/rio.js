@@ -35,7 +35,6 @@ const fromFile = function(name) {
     return new Promise((resolve, reject) => {
         fs.readFile(fname, {encoding: 'utf8'}, (err, str) => {
             if(err) {
-                console.og('!!!')
                 reject(err);
             } else {
                 resolve(str);
@@ -185,6 +184,10 @@ switch(cmd) {
                     console.log(res.code)
                 }
             })
+               .catch(function(e) {
+                   console.error(e)
+                   process.exit(1)
+               })
 
         break;
 
