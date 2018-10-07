@@ -1,7 +1,7 @@
 const { generate } = require('astring')
 const { difference, keys, isEmpty, assoc, test, indexOf, set, is, values, prop
         , concat, dropLast, last, reduce, over, append, nth, lensProp, findIndex
-        , remove, lensPath, view, find, compose, filter, map, has
+        , remove, lensPath, view, find, compose, filter, map, has, join
         , path, propEq, unless, isNil } = require('ramda')
 
 const unresolvedIdentifiers = require('./unresolved-identifiers.js')
@@ -12,12 +12,20 @@ const resolveIdentifiers = imports => ast => {
     const unresolved = unresolvedIdentifiers(imports, ast)
 
     if( !isEmpty(unresolved) ) {
-        throw({
-            message: 'Unknown symbol: ' 
-                        + unresolved.name
-                        + ' (line: ' + unresolved.loc.start.line
-                        + ', column: ' + unresolved.loc.start.column + ')'
-        })
+        const xs = map( x => 
+            'Unknown symbol: ' 
+                        + x.name
+                        + ' (line: ' + x.loc.start.line
+                        + ', column: ' + x.loc.start.column + ')', unresolved)
+
+        throw({message: join('\n', xs)})
+
+        //throw({
+            //message: 'Unknown symbol: ' 
+                        //+ unresolved.name
+                        //+ ' (line: ' + unresolved.loc.start.line
+                        //+ ', column: ' + unresolved.loc.start.column + ')'
+        //})
     }
 
     return ast
