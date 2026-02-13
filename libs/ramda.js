@@ -1,5 +1,11 @@
 const R = require('ramda')
 
+const composeP = R.composeP || ((...fns) => R.composeWith((f, x) => Promise.resolve(x).then(f), fns))
+const pipeP = R.pipeP || ((...fns) => R.pipeWith((f, x) => Promise.resolve(x).then(f), fns))
+const composeK = R.composeK || ((...fns) => R.composeWith((f, x) => R.chain(f, x), fns))
+const pipeK = R.pipeK || ((...fns) => R.pipeWith((f, x) => R.chain(f, x), fns))
+const contains = R.contains || R.includes
+
 module.exports = {
     names:[
         "F",
@@ -280,11 +286,11 @@ module.exports = {
         R.comparator,
         R.complement,
         R.compose,
-        R.composeK,
-        R.composeP,
+        composeK,
+        composeP,
         R.concat,
         R.cond,
-        R.contains,
+        contains,
         R.converge,
         R.countBy,
         R.curry,
@@ -413,8 +419,8 @@ module.exports = {
         R.pickAll,
         R.pickBy,
         R.pipe,
-        R.pipeK,
-        R.pipeP,
+        pipeK,
+        pipeP,
         R.pluck,
         R.prepend,
         R.product,
@@ -498,4 +504,3 @@ module.exports = {
         R.zipWith
     ]
 };
-

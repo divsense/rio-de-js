@@ -1,4 +1,3 @@
-const chai = require('chai')
 const rio = require('riojs')
 const R = require('ramda')
 
@@ -6,7 +5,7 @@ const fetch = require('./fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../rio.de.js')
 
-const assert = chai.assert
+const assert = require('./assert')
 
 const libUrl = 'file://./examples/parser.rio'
 

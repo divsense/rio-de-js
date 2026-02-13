@@ -1,11 +1,10 @@
-const chai = require('chai')
 const rio = require('riojs')
 
 const fetch = require('./fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../rio.de.js')
 
-const assert = chai.assert
+const assert = require('./assert')
 
 const libUrl = 'https://gist.githubusercontent.com/divsense/fa4d8acff6a4e96b5ab38da008c81db3/raw/2ce37af6a13e100ed66dce18dd6b8af9acb5a70e/monad-composition.rio'
 
@@ -28,4 +27,3 @@ describe('Monad Composition', function() {
     });
 
 });
-

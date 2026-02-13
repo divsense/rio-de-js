@@ -1,4 +1,3 @@
-const chai = require('chai')
 const rio = require('riojs')
 const R = require('ramda')
 
@@ -6,7 +5,7 @@ const fetch = require('./fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../rio.de.js')
 
-const assert = chai.assert
+const assert = require('./assert')
 
 const libUrl = 'mart::parsers/xmld.rio'
 const endpoint = 'file://./examples/'
@@ -26,15 +25,14 @@ describe('Xmld', function() {
 
     it('should parse attributes', function() {
 
-        //const result = xmld.parse('.node dd foo="bar" sdff ')
         const result = xmld.parse('~ node dd foo="bar" sdff ')
-
-        //console.log(JSON.stringify(result[0], null, 2))
-
-
-        //assert.deepEqual(result[0], {key:'foo', value:'bar'})
+        assert.isArray(result)
+        assert.lengthOf(result, 2)
+        assert.deepEqual(result[0][0], {key: 'selector', value: '~'})
+        assert.equal(result[0][1].key, 'italic token-comment')
+        assert.equal(result[0][1].value, ' node dd foo="bar" sdff ')
+        assert.equal(result[1], '')
 
     });
 
 });
-

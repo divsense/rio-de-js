@@ -1,4 +1,4 @@
-const { over, lensProp, reduce, indexOf, remove, append, flatten, prop, compose, filter, map, has, path, propEq } = require('ramda')
+const { over, lensProp, reduce, indexOf, remove, append, flatten, prop, compose, filter, map, has, path, propEq, update } = require('ramda')
 
 const defaultLibs = ['ramda']
 
@@ -61,7 +61,7 @@ const buildScope = (xs, libs) => reduce((m,a) => {
 
 module.exports = function(ast, riolibs) {
 
-    const impdecs = filter(propEq('type', 'ImportDeclaration'), ast.body)
+    const impdecs = filter(propEq('ImportDeclaration', 'type'), ast.body)
 
     const defs = reduce( (m,a) => {
         const url = path(['source', 'value'], a)
@@ -89,4 +89,3 @@ module.exports = function(ast, riolibs) {
 
     return {scope, imports:scopeNames}
 }
-

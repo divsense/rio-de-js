@@ -18,7 +18,7 @@ const removeExportDeclarations = R.over(R.lensProp('body'), R.filter(x => x.type
 const getExports = R.compose(
         R.map(R.path(['key', 'name'])),
         R.view(R.lensPath(['argument','properties'])),
-        R.find(R.propEq('type', 'ReturnStatement')),
+        R.find(R.propEq('ReturnStatement', 'type')),
         R.prop('body')
 )
 
@@ -46,7 +46,7 @@ const getImports = R.compose(
                 return {source, names}
 
             }),
-            R.filter(R.propEq('type', 'ImportDeclaration')),
+            R.filter(R.propEq('ImportDeclaration', 'type')),
             R.prop('body')
 )
 
@@ -65,10 +65,10 @@ const msm = ast => {
     const names = R.map(R.prop('name'), symbols)
 
     const ramdaNames = R.intersection(names, ramdaLib.names)
-    const promiseNames = R.intersection(names, ramdaLib.names)
+    const promiseNames = R.intersection(names, promiseLib.names)
+    const knownNames = R.concat(ramdaNames, promiseNames)
 
-
-    const unresolved = R.map(name => R.find(R.propEq('name', name), symbols), R.difference(names, ramdaNames))
+    const unresolved = R.map(name => R.find(R.propEq(name, 'name'), symbols), R.difference(names, knownNames))
     const ramdaSource = ramdaNames.length ? [{source: 'ramda', names: ramdaNames}] : []
 
     const CR = R.join('\n')
@@ -91,4 +91,3 @@ const msm = ast => {
 }
 
 module.exports = msm
-

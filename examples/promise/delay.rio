@@ -2,7 +2,7 @@
 
 export total1, total2
 
-import 'promise' { resolve }
+import 'promise' { promiseResolve }
 import 'io' { delay }
 
 maxDelay = 1500
@@ -14,8 +14,7 @@ limit = ifElse(lt(maxDelay), always(maxDelay), identity)
 calc = limit . sum . map(prop('value'))
 
 // total1 :: [{value::Number}] -> Promise(Number)
-total1 = inputs -> resolve(calc(inputs)) >>> delay
+total1 = inputs -> promiseResolve(calc(inputs)) >>> delay
 
 // total2 :: [{value::Number}] -> Promise(Number)
-total2 = delay <<> resolve . calc
-
+total2 = delay <<> promiseResolve . calc

@@ -37,10 +37,10 @@ const removeImportDeclarations = over(lensProp('body'), filter(x => x.type !== '
 // relocateExports :: AST -> AST
 const relocateExports = ast => {
 
-    const ix = filter(propEq('type', 'ReturnStatement'), ast.body)
+    const ix = filter(propEq('ReturnStatement', 'type'), ast.body)
 
     if(ix.length === 1) {
-        const index = findIndex(propEq('type', 'ReturnStatement'), ast.body)
+        const index = findIndex(propEq('ReturnStatement', 'type'), ast.body)
         return over(lensProp('body'), body => {
             const a = nth(index, body)
             return append(a, remove(index, 1, body))
@@ -57,7 +57,7 @@ const relocateExports = ast => {
 // getExportedIdentifiers :: AST -> AST
 const getExportedIdentifiers = ast => {
 
-    const xs = view(lensPath(['argument','properties']), find(propEq('type', 'ReturnStatement'), ast.body))
+    const xs = view(lensPath(['argument','properties']), find(propEq('ReturnStatement', 'type'), ast.body))
 
     if(xs) {
         return map(path(['key', 'name']), xs)
@@ -79,4 +79,3 @@ module.exports = function(ast, imports) {
     return {code, exports}
 
 }
-

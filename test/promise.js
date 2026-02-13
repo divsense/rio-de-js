@@ -1,12 +1,9 @@
-const chai = require('chai')
-const chaiAsPromised = require('chai-as-promised')
 
 const fetch = require('./fetcher.js')
 const fci = require('../helpers/fetch-compile-install.js')
 const { rioLibs, libFunction } = require('../rio.de.js')
 
-chai.use(chaiAsPromised)
-const assert = chai.assert
+const assert = require('./assert')
 
 const libUrl = 'file://./examples/promise/delay.rio'
 

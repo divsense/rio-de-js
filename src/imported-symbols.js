@@ -10,6 +10,5 @@ module.exports = function(ast) {
             map(toSymbolsInUse),
             flatten,
             map(path(['specifiers'])),
-            filter(propEq('type', 'ImportDeclaration')))( ast.body )
+            filter(propEq('ImportDeclaration', 'type')))( ast.body )
 }
-
