@@ -1,5 +1,5 @@
 {
-  "name": "rio-de-js",
+  "name": "@haknick/rio-de-js",
   "version": "0.10.6",
   "description": "Divsense Rio Lib Builder",
   "main": "index.js",
@@ -17,7 +17,7 @@
     "compiler",
     "javascript"
   ],
-  "author": "Oleg Kirichenko",
+  "author": "haknick",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/divsense/rio-de-js/issues"
